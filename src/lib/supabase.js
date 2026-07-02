@@ -67,9 +67,14 @@ export async function setOnline(userId, isOnline) {
 export async function getAllProfiles() {
   const { data, error } = await supabase
     .from('profiles')
-    .select('*, characters(name, alias, avatar_url, avatar_color, rank, quirk_data)')
+    .select('*, characters(name, alias, avatar_url, avatar_color, rank, quirk_data, hp, hp_max, quirk_charge, quirk_max, xp, xp_max, quirk_level)')
     .order('is_online', { ascending: false })
   return { data, error }
+}
+
+export async function updateTheme(userId, theme) {
+  const { error } = await supabase.from('profiles').update({ theme }).eq('id', userId)
+  return { error }
 }
 
 // ─── CHARACTER helpers ──────────────────────────────────────
@@ -92,7 +97,7 @@ export async function upsertCharacter(userId, charData) {
   return { data, error }
 }
 
-// ─── AVATAR upload ──────────────────────────────────────────
+// ─── IMAGE upload helpers (generic) ──────────────────────────
 
 export async function uploadAvatar(userId, file) {
   const ext = file.name.split('.').pop()
@@ -101,8 +106,18 @@ export async function uploadAvatar(userId, file) {
     .from('avatars')
     .upload(path, file, { upsert: true })
   if (uploadError) return { url: null, error: uploadError }
-
   const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+  return { url: data.publicUrl, error: null }
+}
+
+export async function uploadToBucket(bucket, pathPrefix, file) {
+  const ext = file.name.split('.').pop()
+  const path = `${pathPrefix}/${Date.now()}.${ext}`
+  const { error: uploadError } = await supabase.storage
+    .from(bucket)
+    .upload(path, file, { upsert: true })
+  if (uploadError) return { url: null, error: uploadError }
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path)
   return { url: data.publicUrl, error: null }
 }
 
@@ -133,13 +148,19 @@ export async function deleteItem(itemId) {
 }
 
 // ─── QUESTS helpers ─────────────────────────────────────────
+// Missões agora podem ser vistas/geridas pelo dono OU por usuários vinculados (assigned_users)
 
 export async function getQuests(userId) {
   const { data, error } = await supabase
     .from('quests')
     .select('*')
-    .eq('user_id', userId)
+    .or(`user_id.eq.${userId},assigned_users.cs.{${userId}}`)
     .order('sort_order')
+  return { data: data || [], error }
+}
+
+export async function getAllQuests() {
+  const { data, error } = await supabase.from('quests').select('*').order('created_at', { ascending: false })
   return { data: data || [], error }
 }
 
@@ -150,6 +171,16 @@ export async function upsertQuest(userId, quest) {
     return { data, error }
   }
   const { data, error } = await supabase.from('quests').insert(payload).select().single()
+  return { data, error }
+}
+
+export async function completeQuest(questId) {
+  const { data, error } = await supabase
+    .from('quests')
+    .update({ completed: true, is_active: false })
+    .eq('id', questId)
+    .select()
+    .single()
   return { data, error }
 }
 
@@ -180,11 +211,20 @@ export async function updateServerConfig(id, updates) {
   return { data, error }
 }
 
-// ─── LOCATIONS helpers ──────────────────────────────────────
+// ─── LOCATIONS helpers (agora com capa, fundo e modo combate) ──
 
 export async function getLocations() {
-  const { data, error } = await supabase.from('locations').select('*').order('sort_order').order('created_at')
+  const { data, error } = await supabase
+    .from('locations')
+    .select('*')
+    .order('pinned', { ascending: false })
+    .order('created_at', { ascending: false })
   return { data: data || [], error }
+}
+
+export async function getLocation(id) {
+  const { data, error } = await supabase.from('locations').select('*').eq('id', id).single()
+  return { data, error }
 }
 
 export async function upsertLocation(loc) {
@@ -201,9 +241,9 @@ export async function deleteLocation(locId) {
   return { error }
 }
 
-// ─── MESSAGES helpers ───────────────────────────────────────
+// ─── MESSAGES helpers (com NPC e imagem) ─────────────────────
 
-export async function getMessages(locationId, limit = 50) {
+export async function getMessages(locationId, limit = 60) {
   const { data, error } = await supabase
     .from('messages')
     .select('*')
@@ -218,9 +258,35 @@ export async function sendMessage(msg) {
   return { data, error }
 }
 
-// ─── FEED helpers ───────────────────────────────────────────
+export async function deleteMessage(id) {
+  const { error } = await supabase.from('messages').delete().eq('id', id)
+  return { error }
+}
 
-export async function getFeedPosts(limit = 20) {
+// ─── NPCs helpers ─────────────────────────────────────────────
+
+export async function getNpcs() {
+  const { data, error } = await supabase.from('npcs').select('*').order('name')
+  return { data: data || [], error }
+}
+
+export async function upsertNpc(npc) {
+  if (npc.id) {
+    const { data, error } = await supabase.from('npcs').update(npc).eq('id', npc.id).select().single()
+    return { data, error }
+  }
+  const { data, error } = await supabase.from('npcs').insert(npc).select().single()
+  return { data, error }
+}
+
+export async function deleteNpc(id) {
+  const { error } = await supabase.from('npcs').delete().eq('id', id)
+  return { error }
+}
+
+// ─── FEED helpers (newsletter — aceita imagem e NPC) ─────────
+
+export async function getFeedPosts(limit = 30) {
   const { data, error } = await supabase.from('feed_posts').select('*').order('created_at', { ascending: false }).limit(limit)
   return { data: data || [], error }
 }
@@ -295,71 +361,153 @@ export async function deleteRankEntry(id) {
   return { error }
 }
 
-// ─── ARENA helpers ──────────────────────────────────────────
+// ─── Extended signUp — APENAS conta, sem criar personagem ────
 
-export async function getFighters(sessionId) {
-  const { data, error } = await supabase.from('fighters').select('*').eq('session_id', sessionId).order('created_at')
-  return { data: data || [], error }
-}
-
-export async function upsertFighter(fighter) {
-  if (fighter.id) {
-    const { data, error } = await supabase.from('fighters').update(fighter).eq('id', fighter.id).select().single()
-    return { data, error }
-  }
-  const { data, error } = await supabase.from('fighters').insert(fighter).select().single()
-  return { data, error }
-}
-
-export async function deleteFighter(id) {
-  const { error } = await supabase.from('fighters').delete().eq('id', id)
-  return { error }
-}
-
-export async function getBattleLog(sessionId, limit = 80) {
-  const { data, error } = await supabase.from('battle_log').select('*').eq('session_id', sessionId).order('created_at').limit(limit)
-  return { data: data || [], error }
-}
-
-export async function addBattleLog(entry) {
-  const { data, error } = await supabase.from('battle_log').insert(entry).select().single()
-  return { data, error }
-}
-
-export async function clearBattleLog(sessionId) {
-  const { error } = await supabase.from('battle_log').delete().eq('session_id', sessionId)
-  const { error: e2 } = await supabase.from('fighters').delete().eq('session_id', sessionId)
-  return { error: error || e2 }
-}
-
-// ─── Extended signUp — saves initial character after registration ───
-// (Re-exported so AuthPage can call it directly)
-export async function signUpWithChar({ email, password, username, charName, charAlias, charColor }) {
-  // 1. Create auth user (trigger auto-creates profile + reputation row)
+export async function signUpAccount({ email, password, username }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { username } }
   })
-  if (error) return { data, error }
+  return { data, error }
+}
 
-  const userId = data?.user?.id
-  if (!userId) return { data, error: new Error('Usuário não criado') }
+// ─── TRAITS helpers ─────────────────────────────────────────
 
-  // 2. Create initial character skeleton
-  await supabase.from('characters').upsert({
-    user_id: userId,
-    name: charName,
-    alias: charAlias || '',
-    avatar_color: charColor || 'purple',
-    specialty: '',
-    hp: 100, hp_max: 100,
-    quirk_charge: 100, quirk_max: 100,
-    stamina: 100, stamina_max: 100,
-    xp: 0, xp_max: 1000,
-    attrs: { forca: 50, agilidade: 50, controle: 50, resistencia: 50, inteligencia: 50, carisma: 50 },
-    quirk_data: { name: '', type: '', subtype: '', level: 1, range: '', weakness: '', dominio: 0, carga: 100, description: '', awakening: '', skills: [] }
-  }, { onConflict: 'user_id' })
+export async function getPresetTraits() {
+  const { data, error } = await supabase.from('traits').select('*').order('rank').order('name')
+  return { data: data || [], error }
+}
 
-  return { data, error: null }
+export async function createCustomTrait(userId, trait) {
+  const { data, error } = await supabase.from('traits')
+    .insert({ ...trait, is_preset: false, created_by: userId })
+    .select().single()
+  return { data, error }
+}
+
+export async function getCharacterTraits(userId) {
+  const { data, error } = await supabase
+    .from('character_traits')
+    .select('*, traits(*)')
+    .eq('user_id', userId)
+  return { data: data || [], error }
+}
+
+export async function addTraitToCharacter(userId, traitId) {
+  const { data, error } = await supabase.from('character_traits')
+    .insert({ user_id: userId, trait_id: traitId })
+    .select('*, traits(*)')
+    .single()
+  return { data, error }
+}
+
+export async function removeTraitFromCharacter(userId, traitId) {
+  const { error } = await supabase.from('character_traits')
+    .delete()
+    .eq('user_id', userId)
+    .eq('trait_id', traitId)
+  return { error }
+}
+
+// ─── COMBAT SESSION helpers ──────────────────────────────────
+
+export async function getActiveCombatSession(locationId) {
+  const { data, error } = await supabase
+    .from('combat_sessions')
+    .select('*')
+    .eq('location_id', locationId)
+    .eq('is_active', true)
+    .maybeSingle()
+  return { data, error }
+}
+
+export async function createCombatSession(locationId, questId, userId) {
+  const { data, error } = await supabase
+    .from('combat_sessions')
+    .insert({ location_id: locationId, quest_id: questId, created_by: userId })
+    .select().single()
+  return { data, error }
+}
+
+export async function endCombatSession(sessionId) {
+  const { error } = await supabase.from('combat_sessions')
+    .update({ is_active: false })
+    .eq('id', sessionId)
+  return { error }
+}
+
+export async function updateSessionTurn(sessionId, currentTurn, round) {
+  const { error } = await supabase.from('combat_sessions')
+    .update({ current_turn: currentTurn, round })
+    .eq('id', sessionId)
+  return { error }
+}
+
+// ─── COMBATANTS helpers ──────────────────────────────────────
+
+export async function getCombatants(sessionId) {
+  const { data, error } = await supabase
+    .from('combatants')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('initiative', { ascending: false })
+  return { data: data || [], error }
+}
+
+export async function addCombatant(combatant) {
+  const { data, error } = await supabase.from('combatants').insert(combatant).select().single()
+  return { data, error }
+}
+
+export async function updateCombatant(id, updates) {
+  const { data, error } = await supabase.from('combatants').update(updates).eq('id', id).select().single()
+  return { data, error }
+}
+
+export async function deleteCombatant(id) {
+  const { error } = await supabase.from('combatants').delete().eq('id', id)
+  return { error }
+}
+
+// Aplica dano ou cura a um combatant (negativo = dano, positivo = cura)
+export async function applyCombatEffect(combatantId, hpDelta, quirkDelta = 0) {
+  const { data: c, error: fetchErr } = await supabase
+    .from('combatants').select('hp, hp_max, quirk_charge, quirk_max, is_alive').eq('id', combatantId).single()
+  if (fetchErr) return { error: fetchErr }
+  const newHp = Math.max(0, Math.min(c.hp_max, c.hp + hpDelta))
+  const newQk = Math.max(0, Math.min(c.quirk_max, c.quirk_charge + quirkDelta))
+  const isAlive = newHp > 0
+  const { data, error } = await supabase.from('combatants')
+    .update({ hp: newHp, quirk_charge: newQk, is_alive: isAlive })
+    .eq('id', combatantId).select().single()
+  // Se foi um jogador, sincroniza com a ficha real
+  if (!error && data?.user_id) {
+    await supabase.from('characters')
+      .update({ hp: newHp, quirk_charge: newQk })
+      .eq('user_id', data.user_id)
+  }
+  return { data, error }
+}
+
+// ─── COMBAT ACTIONS helpers ──────────────────────────────────
+
+export async function getCombatActions(sessionId, limit = 80) {
+  const { data, error } = await supabase
+    .from('combat_actions')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('created_at')
+    .limit(limit)
+  return { data: data || [], error }
+}
+
+export async function addCombatAction(action) {
+  const { data, error } = await supabase.from('combat_actions').insert(action).select().single()
+  return { data, error }
+}
+
+export async function clearCombatActions(sessionId) {
+  const { error } = await supabase.from('combat_actions').delete().eq('session_id', sessionId)
+  return { error }
 }
