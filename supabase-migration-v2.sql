@@ -356,3 +356,30 @@ insert into public.traits (name, description, icon, rank, type, effect, is_prese
   ('Berserker',         'ATK +30% mas DEF -20% quando enraivecido',     '😤', 'A', 'combat',      '{"atk_bonus":30,"def_reduce":20}',        true),
   ('Suporte Tático',    'Ao curar aliado, concede +10% ATK por 1 turno','💊', 'B', 'active',      '{"heal_atk_bonus":10}',                   true)
 on conflict do nothing;
+
+-- ── QUESTS: adiciona campos de tipo de missão e NPCs vinculados ──
+alter table public.quests
+  add column if not exists mission_type   text    default 'combat',
+  add column if not exists assigned_npcs  uuid[]  default '{}';
+
+-- ── NPCs: adiciona campos de nível e atributos ──
+alter table public.npcs
+  add column if not exists level       int   default 1,
+
+-- ── QUESTS: adiciona campos de tipo de missão e NPCs vinculados ──
+alter table public.quests
+  add column if not exists mission_type   text   default 'combat',
+  add column if not exists assigned_npcs  uuid[] default '{}';
+
+-- ── NPCs: adiciona campos de nível e atributos ──
+alter table public.npcs
+  add column if not exists level       int   default 1,
+  add column if not exists attrs       jsonb default '{"forca":6,"agilidade":6,"controle":6,"resistencia":6,"inteligencia":6,"carisma":6,"stamina":6}',
+  add column if not exists hp_max      int   default 100,
+  add column if not exists quirk_max   int   default 100,
+  add column if not exists stamina_max int   default 100,
+  add column if not exists quirk_type  text  default '';
+
+-- ── PROFILES: tema visual ──
+alter table public.profiles
+  add column if not exists theme text default 'dark';

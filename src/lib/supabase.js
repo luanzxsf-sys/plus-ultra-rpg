@@ -511,3 +511,48 @@ export async function clearCombatActions(sessionId) {
   const { error } = await supabase.from('combat_actions').delete().eq('session_id', sessionId)
   return { error }
 }
+
+// ─── LEVEL & XP helpers ─────────────────────────────────────
+
+// Adiciona XP a um personagem e atualiza nível no banco
+export async function addXpToCharacter(userId, xpAmount) {
+  const { data: char, error: fetchErr } = await supabase
+    .from('characters').select('xp, xp_max, quirk_xp, quirk_level').eq('user_id', userId).single()
+  if (fetchErr) return { error: fetchErr }
+  const newXp = (char.xp || 0) + xpAmount
+  const { data, error } = await supabase.from('characters')
+    .update({ xp: newXp }).eq('user_id', userId).select().single()
+  return { data, error }
+}
+
+// Adiciona XP a múltiplos usuários (missão concluída)
+export async function addXpToUsers(userIds, xpAmount) {
+  const results = await Promise.all(
+    userIds.map(uid => addXpToCharacter(uid, xpAmount))
+  )
+  return results
+}
+
+// ─── RANKING realtime helpers ────────────────────────────────
+
+export async function upsertRankFromCharacter(userId, charData) {
+  // Cria ou atualiza entrada no ranking baseada na ficha
+  const { data: existing } = await supabase
+    .from('ranking').select('id').eq('user_id', userId).maybeSingle()
+  const payload = {
+    user_id:     userId,
+    player_name: charData.name || 'Herói',
+    char_name:   charData.alias || charData.name || '',
+    quirk_name:  charData.quirk_data?.name || '',
+    points:      charData.xp || 0,
+    rank_badge:  charData.rank || '',
+    color:       charData.avatar_color || 'blue',
+  }
+  if (existing?.id) {
+    payload.id = existing.id
+    const { data, error } = await supabase.from('ranking').update(payload).eq('id', existing.id).select().single()
+    return { data, error }
+  }
+  const { data, error } = await supabase.from('ranking').insert(payload).select().single()
+  return { data, error }
+}
