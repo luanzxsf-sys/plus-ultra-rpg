@@ -1,85 +1,128 @@
-import { gradeLabel, gradeColor, ATTR_META, ATTR_KEYS, calcDerived, SPECIALTIES, calcAttrsWithSpecialty } from '../lib/gameSystem'
+import { gradeLabel, gradeColor, ATTR_META, ATTR_KEYS, calcDerived, calcEffectiveAttrs, SPECIALTIES } from '../lib/gameSystem'
 
 const TOTAL_POINTS = 60
 const ATTR_MIN = 1
-const ATTR_MAX_BASE = 20  // máximo na criação; sem cap depois
 
-export default function AttrBuilder({ attrs, onChange, readOnly, quirk_type, traits = [], specialty }) {
-  const used = ATTR_KEYS.reduce((s, k) => s + (attrs[k] || 0), 0)
+export default function AttrBuilder({
+  attrs, onChange, readOnly,
+  quirk_type, traits = [], specialty,
+  step = 1, onStepChange,
+}) {
+  const used = ATTR_KEYS.reduce((s,k) => s + (attrs[k]||0), 0)
   const left = TOTAL_POINTS - used
-  const effectiveAttrs = specialty ? calcAttrsWithSpecialty(attrs, specialty) : attrs
-  const derived = calcDerived(effectiveAttrs, quirk_type, traits)
+  const { effective, bonuses } = calcEffectiveAttrs(attrs, quirk_type, traits, specialty)
+  const derived = calcDerived(attrs, quirk_type, traits, specialty)
 
   function inc(k) {
-    if (readOnly || left <= 0) return
-    onChange({ ...attrs, [k]: (attrs[k] || 0) + 1 })
+    if (readOnly || left < step) return
+    const add = Math.min(step, left)
+    onChange({ ...attrs, [k]: (attrs[k]||0) + add })
   }
   function dec(k) {
-    if (readOnly || (attrs[k] || 0) <= ATTR_MIN) return
-    onChange({ ...attrs, [k]: (attrs[k] || 0) - 1 })
+    if (readOnly) return
+    const sub = Math.min(step, (attrs[k]||0) - ATTR_MIN)
+    if (sub <= 0) return
+    onChange({ ...attrs, [k]: (attrs[k]||0) - sub })
   }
 
   const specObj = SPECIALTIES.find(s => s.key === specialty)
 
+  // Group bonuses by attr for inline display
+  const bonusByAttr = {}
+  bonuses.forEach(b => {
+    if (!bonusByAttr[b.attr]) bonusByAttr[b.attr] = []
+    bonusByAttr[b.attr].push(b)
+  })
+
+  const STEPS = [1, 5, 10]
+
   return (
     <div>
       {!readOnly && (
-        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14, padding:'10px 12px', background:'var(--panel)', borderRadius:8, border:'1px solid var(--border)' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, padding:'10px 12px', background:'var(--panel)', borderRadius:8, border:'1px solid var(--border)' }}>
           <div>
-            <div className="points-left">{left}</div>
+            <div style={{ fontFamily:'Orbitron,monospace', fontSize:26, fontWeight:700, color:left<=0?'var(--red-l)':'var(--gold)', lineHeight:1 }}>{left}</div>
             <div style={{ fontSize:9, color:'var(--dim)', textTransform:'uppercase', letterSpacing:1 }}>pontos</div>
           </div>
-          <div style={{ flex:1, fontSize:11, color:'var(--muted)', lineHeight:1.6 }}>
-            Distribua {TOTAL_POINTS} pontos.<br/>
-            <span style={{ color:'var(--gold)', fontSize:10 }}>Resistência +5HP · Controle +5Quirk · Stamina +3Stamina</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:11, color:'var(--muted)', marginBottom:5 }}>
+              Distribua {TOTAL_POINTS} pontos. <span style={{ color:'var(--gold)', fontSize:10 }}>Resistência +5HP · Controle +5Quirk · Stamina +3Stamina</span>
+            </div>
+            <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+              <span style={{ fontSize:9, color:'var(--dim)', textTransform:'uppercase', letterSpacing:1 }}>Passo:</span>
+              {STEPS.map(s => (
+                <button key={s} onClick={() => onStepChange?.(s)}
+                  className={`btn btn-sm ${step===s?'btn-p':'btn-g'}`} style={{ padding:'2px 8px', fontSize:10 }}>
+                  {s}
+                </button>
+              ))}
+              <button onClick={() => {
+                const v = parseInt(prompt('Passo personalizado (1-50):'), 10)
+                if (v > 0 && v <= 50) onStepChange?.(v)
+              }} className={`btn btn-sm ${![1,5,10].includes(step)?'btn-p':'btn-g'}`} style={{ padding:'2px 8px', fontSize:10 }}>
+                {![1,5,10].includes(step) ? step : '?'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {specObj && (
-        <div style={{ marginBottom:10, padding:'7px 10px', background:'rgba(88,101,242,.08)', borderRadius:6, border:'1px solid rgba(88,101,242,.25)', fontSize:10, color:'var(--blue-l)' }}>
-          {specObj.icon} <strong>{specObj.label}</strong>: {Object.entries(specObj.bonuses).map(([k,v])=>`+${v} ${ATTR_META[k]?.label||k}`).join(' · ')}
-          <div style={{ fontSize:10, color:'var(--dim)', marginTop:2 }}>🎯 {specObj.passive}</div>
+      {/* Specialty & bonus summary */}
+      {(specObj || bonuses.length > 0) && (
+        <div style={{ marginBottom:10, padding:'7px 10px', background:'rgba(88,101,242,.08)', borderRadius:6, border:'1px solid rgba(88,101,242,.2)' }}>
+          {specObj && (
+            <div style={{ fontSize:10, color:'var(--blue-l)', fontWeight:700, marginBottom:bonuses.length>0?4:0 }}>
+              {specObj.icon} {specObj.label}: {Object.entries(specObj.bonuses).map(([k,v])=>`+${v} ${ATTR_META[k]?.label}`).join(' · ')}
+            </div>
+          )}
+          {bonuses.filter(b=>b.sourceType!=='specialty').map((b,i)=>(
+            <div key={i} style={{ fontSize:10, color:b.color, fontWeight:700 }}>
+              ✦ {b.source}: +{b.value} {ATTR_META[b.attr]?.label}
+            </div>
+          ))}
         </div>
       )}
 
       {ATTR_KEYS.map(k => {
-        const base = attrs[k] || 0
-        const effective = effectiveAttrs[k] || 0
-        const bonus = effective - base
-        const meta = ATTR_META[k]
-        const pct  = Math.min(100, (effective / 30) * 100)  // 30 = cap visual
-        const grade = gradeLabel(effective)
-        const gcolor = gradeColor(effective)
+        const base      = attrs[k] || 0
+        const eff       = effective[k] || 0
+        const extraBons = bonusByAttr[k] || []
+        const pct       = Math.min(100, (eff / 40) * 100)
+        const meta      = ATTR_META[k]
         return (
           <div key={k} className="attr-builder-row">
             <div className="attr-builder-name" title={meta.desc}>{meta.label}</div>
-            {!readOnly && (
+            {!readOnly ? (
               <div className="attr-builder-controls">
                 <button className="attr-btn" onClick={()=>dec(k)} disabled={base<=ATTR_MIN}>−</button>
                 <span className="attr-val">{base}</span>
-                <button className="attr-btn" onClick={()=>inc(k)} disabled={base>=ATTR_MAX_BASE||left<=0}>+</button>
+                <button className="attr-btn" onClick={()=>inc(k)} disabled={left<step}>+</button>
               </div>
+            ) : (
+              <span className="attr-val" style={{ fontFamily:'Orbitron,monospace', fontSize:12, marginRight:4, color:'var(--text-h)' }}>{base}</span>
             )}
-            {readOnly && (
-              <span className="attr-val" style={{ fontFamily:'Orbitron,monospace', fontSize:12, marginRight:4, color:'var(--text-h)' }}>
-                {effective}
-                {bonus>0 && <span style={{ fontSize:8, color:'var(--green-l)', marginLeft:2 }}>+{bonus}</span>}
+            {/* Bonus indicators */}
+            {extraBons.length > 0 && (
+              <span style={{ fontSize:9, fontWeight:700, color:'var(--gold)', minWidth:28, textAlign:'center' }}>
+                +{extraBons.reduce((s,b)=>s+b.value,0)}
               </span>
             )}
+            {extraBons.length === 0 && !readOnly && <span style={{ minWidth:28 }}/>}
             <div className="attr-bar-wrap">
-              <div className="attr-bar-fill" style={{ width:`${pct}%`, background: meta.color }} />
+              <div className="attr-bar-fill" style={{ width:`${pct}%`, background:meta.color }} />
             </div>
-            <span className="attr-grade" style={{ color: gcolor, fontSize:10 }}>{grade}</span>
+            <span className="attr-grade" style={{ color:gradeColor(eff), fontSize:10, minWidth:26 }}>
+              {gradeLabel(eff)}
+            </span>
           </div>
         )
       })}
 
       <div style={{ marginTop:12, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:6 }}>
         {[
-          { l:'HP Máx',      v: derived.hpMax,      c:'var(--red-l)' },
-          { l:'Quirk Máx',   v: derived.quirkMax,   c:'var(--purple-l)' },
-          { l:'Stamina Máx', v: derived.staminaMax, c:'var(--blue-l)' },
+          { l:'HP Máx',      v:derived.hpMax,      c:'var(--red-l)' },
+          { l:'Quirk Máx',   v:derived.quirkMax,   c:'var(--purple-l)' },
+          { l:'Stamina Máx', v:derived.staminaMax, c:'var(--blue-l)' },
         ].map(s => (
           <div key={s.l} style={{ background:'var(--panel)', border:'1px solid var(--border)', borderRadius:5, padding:'6px 8px', textAlign:'center' }}>
             <div style={{ fontSize:8, color:'var(--dim)', textTransform:'uppercase', letterSpacing:1, marginBottom:2 }}>{s.l}</div>

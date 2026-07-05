@@ -415,7 +415,7 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
 
 /* Pending action display */
 .pending-action-banner { background: rgba(237,66,69,.08); border: 1px solid rgba(237,66,69,.3); border-radius: 6px; padding: 8px 10px; margin: 6px 8px; }
-.pending-action-banner .title { font-family: 'Bangers', cursive; font-size: 12px; letterSpacing: 1px; color: var(--red-l); margin-bottom: 3px; }
+.pending-action-banner .title { font-family: 'Bangers', cursive; font-size: 12px; letter-spacing: 1px; color: var(--red-l); margin-bottom: 3px; }
 
 /* ── LOCATION CARDS ── */
 .loc-news-card { position: relative; border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform .18s, box-shadow .18s; border: 1px solid var(--border); background: var(--card); }
