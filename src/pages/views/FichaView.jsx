@@ -8,7 +8,7 @@ import AttrBuilder from '../../components/AttrBuilder'
 import {
   ATTR_META, ATTR_KEYS, calcDerived, gradeLabel, gradeColor,
   SPECIALTIES, getSpecialty, calcAttrsWithSpecialty,
-  QUIRK_TYPE_BONUSES, quirkRankName
+  QUIRK_TYPE_BONUSES, quirkRankName, calcLevel, POINTS_PER_LEVEL
 } from '../../lib/gameSystem'
 
 const COLORS = [
@@ -262,7 +262,7 @@ function EditCharModal({ char, onClose, onSaved }) {
 
       <div style={{borderTop:'1px solid var(--border)',paddingTop:12,marginTop:4}}>
         <div style={{fontFamily:'Bangers,cursive',fontSize:14,color:'var(--blue-l)',marginBottom:10,letterSpacing:1}}>⚡ DISTRIBUIR ATRIBUTOS (60 pontos)</div>
-        <AttrBuilder attrs={attrs} onChange={setAttrs} quirk_type={char?.quirk_data?.type||''} specialty={form.specialty}/>
+        <AttrBuilder attrs={attrs} onChange={setAttrs} quirk_type={char?.quirk_data?.type||''} specialty={form.specialty} charLevel={calcLevel(char?.xp||0)}/>
       </div>
 
       <div style={{display:'flex',gap:8,marginTop:14}}>
@@ -363,7 +363,7 @@ export default function FichaView({ onRefreshChar }) {
                 ✨ Bônus {quirkType}: <strong>{quirkBonus.label}</strong>
               </div>
             )}
-            <AttrBuilder attrs={char.attrs||{}} onChange={()=>{}} readOnly quirk_type={quirkType} traits={charTraits} specialty={char.specialty}/>
+            <AttrBuilder attrs={char.attrs||{}} onChange={()=>{}} readOnly quirk_type={quirkType} traits={charTraits} specialty={char.specialty} charLevel={calcLevel(char?.xp||0)}/>
           </div>
 
           <div className="card">

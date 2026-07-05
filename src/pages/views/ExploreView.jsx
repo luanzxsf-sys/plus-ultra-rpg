@@ -6,7 +6,7 @@ import {
   getActiveCombatSession, createCombatSession, endCombatSession,
   getCombatants, addCombatant, updateCombatant, applyCombatEffect,
   getCombatActions, addCombatAction,
-  getNpcs, getAllProfiles, getQuests
+  getNpcs, getAllProfiles, getQuests, addQuirkXp
 } from '../../lib/supabase'
 import { notify } from '../../components/Toast'
 import Modal from '../../components/Modal'
@@ -15,7 +15,7 @@ import {
   calcDerived, ACTION_TYPES, getActionType,
   calcTechDmg, calcTechQuirkCost, techIsAvailable,
   ROLL_DIFFICULTIES, adaptRollDC, resolveAttributeRoll,
-  ATTR_META, ATTR_KEYS, getMissionType
+  ATTR_META, ATTR_KEYS, getMissionType, calcTechQuirkXp
 } from '../../lib/gameSystem'
 
 function rollD(sides){ return Math.floor(Math.random()*sides)+1 }
@@ -490,7 +490,17 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
           ? (rollD(6)+attrV+techDmg)*2
           : rollD(6)+attrV+techDmg
         await applyCombatEffect(target.id,-value)
-        if (skill) await updateCombatant(me.id,{quirk_charge:Math.max(0,me.quirk_charge-calcTechQuirkCost(skill,me.quirk_max))})
+        if (skill) {
+          await updateCombatant(me.id,{quirk_charge:Math.max(0,me.quirk_charge-calcTechQuirkCost(skill,me.quirk_max))})
+          // Award quirk XP for technique usage (only for player combatants, not NPC-controlled)
+          if (!activeNpc && user?.id) {
+            const qxp = calcTechQuirkXp(skill.level || 1)
+            const result = await addQuirkXp(user.id, qxp)
+            if (result.leveledUp) {
+              notify(`✨ Quirk evoluiu para ${['','Iniciante','Intermediário','Avançado','Mestre','Despertado'][result.newLevel]}!`, 'success')
+            }
+          }
+        }
       }
       desc = isMiss ? `💨 FALHA! D20=${roll} — ${me.character_name} erra.`
         : isCrit ? `💥 CRÍTICO! D20=${roll} — ${value} dano em ${target.character_name}!${skill?` [${skill.name}]`:''}`

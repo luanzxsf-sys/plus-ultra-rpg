@@ -532,3 +532,27 @@ insert into public.traits (name, description, icon, rank, type, effect, is_prese
 ('Corpo Divino',      '+20 Resistência. Imune a efeitos de status.',    '⭐','S','passive', '{"attr":"resistencia","bonus":20,"dmg_reduce":25}',true),
 ('Quirk Supremo',     '+20 Controle. Custo Quirk -25%.',               '✨','S','quirk_boost','{"attr":"controle","bonus":20,"quirk_cost_reduce":25}', true)
 on conflict do nothing;
+
+-- ── PATCH v3.1: remove quirk auto-level from levelup trigger ──
+-- Quirk XP agora é ganho pelo uso de técnicas (no frontend)
+-- O trigger só deve subir XP do personagem, não mexer no quirk_level
+CREATE OR REPLACE FUNCTION public.handle_character_levelup()
+RETURNS trigger AS $$
+BEGIN
+  WHILE new.xp >= new.xp_max LOOP
+    new.xp     := new.xp - new.xp_max;
+    new.xp_max := ROUND(new.xp_max * 1.25);
+    -- Bonus de atributos por nível: +5 pontos por nível (aplicado via frontend)
+    -- NÃO mexe mais em quirk_xp nem quirk_level aqui
+  END LOOP;
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Garante que quirk_xp existe na tabela characters
+ALTER TABLE public.characters
+  ADD COLUMN IF NOT EXISTS quirk_xp int DEFAULT 0;
+
+-- ── Sistema de XP de Quirk por uso de técnicas ──
+-- Thresholds: Iniciante=0, Intermediário=100, Avançado=300, Mestre=700, Despertado=1500
+-- O frontend calcula e atualiza quirk_xp e quirk_level diretamente via addQuirkXp()

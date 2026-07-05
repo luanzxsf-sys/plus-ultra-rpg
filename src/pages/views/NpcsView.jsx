@@ -21,7 +21,7 @@ const ROLE_STYLE={
 }
 const POINTS_PER_LEVEL = 8
 const BASE_POINTS      = 42
-const ATTR_MIN_NPC     = 1
+
 
 function calcNpcPoints(level){ return BASE_POINTS + (Math.max(1,level)-1)*POINTS_PER_LEVEL }
 
@@ -52,18 +52,6 @@ function NpcModal({ npc, onClose, onSaved }) {
   }
 
   const totalPoints = calcNpcPoints(form.level)
-  const usedPoints  = ATTR_KEYS.reduce((s,k)=>s+(form.attrs[k]||0),0)
-  const leftPoints  = totalPoints - usedPoints
-
-  function incAttr(k){
-    if(leftPoints<=0) return
-    setForm(f=>({...f,attrs:{...f.attrs,[k]:(f.attrs[k]||0)+1}}))
-  }
-  function decAttr(k){
-    if((form.attrs[k]||0)<=ATTR_MIN_NPC) return
-    setForm(f=>({...f,attrs:{...f.attrs,[k]:(f.attrs[k]||0)-1}}))
-  }
-
   function handleImg(e){
     const file=e.target.files[0];if(!file)return
     if(file.size>3*1024*1024){notify('❌ Máx 3MB','error');return}
@@ -148,41 +136,12 @@ function NpcModal({ npc, onClose, onSaved }) {
 
       {tab==='attrs'&&(
         <div>
-          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14,padding:'10px 12px',background:'var(--panel)',borderRadius:8,border:'1px solid var(--border)'}}>
-            <div>
-              <div style={{fontFamily:'Orbitron,monospace',fontSize:28,fontWeight:700,color:leftPoints<=0?'var(--red-l)':'var(--gold)',lineHeight:1}}>{leftPoints}</div>
-              <div style={{fontSize:9,color:'var(--dim)',textTransform:'uppercase',letterSpacing:1}}>pontos</div>
-            </div>
-            <div style={{flex:1,fontSize:11,color:'var(--muted)',lineHeight:1.6}}>
-              NPC Nível {form.level} tem <strong style={{color:'var(--gold)'}}>{totalPoints}</strong> pontos para distribuir.<br/>
-              <span style={{fontSize:10,color:'var(--dim)'}}>Resistência +5HP · Controle +5Quirk · Stamina +3Stamina</span>
-            </div>
-          </div>
-          {ATTR_KEYS.map(k=>{
-            const v=form.attrs[k]||0
-            const pct=Math.min(100,(v/30)*100)
-            const meta=ATTR_META[k]
-            return(
-              <div key={k} className="attr-builder-row">
-                <div className="attr-builder-name" title={meta.desc}>{meta.label}</div>
-                <div className="attr-builder-controls">
-                  <button className="attr-btn" onClick={()=>decAttr(k)} disabled={v<=ATTR_MIN_NPC}>−</button>
-                  <span className="attr-val">{v}</span>
-                  <button className="attr-btn" onClick={()=>incAttr(k)} disabled={leftPoints<=0}>+</button>
-                </div>
-                <div className="attr-bar-wrap"><div className="attr-bar-fill" style={{width:`${pct}%`,background:meta.color}}/></div>
-                <span className="attr-grade" style={{color:gradeColor(v),fontSize:10}}>{gradeLabel(v)}</span>
-              </div>
-            )
-          })}
-          <div style={{marginTop:12,display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-            {[{l:'HP Máx',v:derived.hpMax,c:'var(--red-l)'},{l:'Quirk Máx',v:derived.quirkMax,c:'var(--purple-l)'},{l:'Stamina Máx',v:derived.staminaMax,c:'var(--blue-l)'}].map(s=>(
-              <div key={s.l} style={{background:'var(--panel)',border:'1px solid var(--border)',borderRadius:5,padding:'6px 8px',textAlign:'center'}}>
-                <div style={{fontSize:8,color:'var(--dim)',textTransform:'uppercase',letterSpacing:1,marginBottom:2}}>{s.l}</div>
-                <div style={{fontFamily:'Orbitron,monospace',fontSize:13,fontWeight:700,color:s.c}}>{s.v}</div>
-              </div>
-            ))}
-          </div>
+          <AttrBuilder
+            attrs={form.attrs}
+            onChange={newAttrs => setForm(f => ({...f, attrs: newAttrs}))}
+            quirk_type={form.quirk_type||''}
+            totalPoints={totalPoints}
+          />
         </div>
       )}
 

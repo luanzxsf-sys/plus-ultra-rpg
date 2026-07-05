@@ -589,3 +589,36 @@ export async function upsertRankFromCharacter(userId, charData) {
   const { data, error } = await supabase.from('ranking').insert(payload).select().single()
   return { data, error }
 }
+
+// ── QUIRK XP ─────────────────────────────────────────────────
+// Quirk XP thresholds (inline to avoid circular import)
+const QUIRK_THRESHOLDS = [0, 100, 300, 700, 1500]
+function _calcQuirkLevel(qxp) {
+  let lv = 1
+  for (let i = QUIRK_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (qxp >= QUIRK_THRESHOLDS[i]) { lv = i + 1; break }
+  }
+  return Math.min(lv, 5)
+}
+
+// Called after using a technique in combat
+export async function addQuirkXp(userId, xpAmount) {
+  const { data: char, error: fetchErr } = await supabase
+    .from('characters')
+    .select('quirk_xp, quirk_level')
+    .eq('user_id', userId)
+    .single()
+  if (fetchErr || !char) return { error: fetchErr }
+
+  const newXp    = (char.quirk_xp || 0) + xpAmount
+  const newLevel = _calcQuirkLevel(newXp)
+  const oldLevel = char.quirk_level || 1
+
+  const { data, error } = await supabase
+    .from('characters')
+    .update({ quirk_xp: newXp, quirk_level: newLevel })
+    .eq('user_id', userId)
+    .select()
+    .single()
+  return { data, error, leveledUp: newLevel > oldLevel, newLevel }
+}

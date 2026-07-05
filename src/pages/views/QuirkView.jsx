@@ -5,7 +5,8 @@ import { notify } from '../../components/Toast'
 import Modal from '../../components/Modal'
 import {
   QUIRK_TYPES_PTBR, QUIRK_TYPE_BONUSES, quirkRankName,
-  ATTR_META, calcTechDmg, calcTechQuirkCost, techIsAvailable, maxTechTypes, calcDerived
+  ATTR_META, calcTechDmg, calcTechQuirkCost, techIsAvailable, maxTechTypes, calcDerived,
+  QUIRK_LEVEL_THRESHOLDS, calcQuirkLevel, quirkXpForNextLevel
 } from '../../lib/gameSystem'
 
 const EVOLUTION_THRESHOLDS = [
@@ -143,7 +144,28 @@ export default function QuirkView({ onRefreshChar }) {
 
           <div className="card">
             <div className="card-title">🌟 Linha de Evolução</div>
-            <div style={{ fontSize:11,color:'var(--muted)',marginBottom:12 }}>A cada 2 level-ups do personagem, o Quirk sobe 1 nível.</div>
+            <div style={{ fontSize:11,color:'var(--muted)',marginBottom:8 }}>O Quirk evolui com o <strong>uso de técnicas em combate</strong>. Técnicas de nível maior dão mais XP.</div>
+            {/* XP bar */}
+            {(() => {
+              const qxp = char?.quirk_xp || 0
+              const curLvThresh = QUIRK_LEVEL_THRESHOLDS[quirkLevel-1] || 0
+              const nextLvThresh = QUIRK_LEVEL_THRESHOLDS[quirkLevel] || null
+              const barPct = nextLvThresh ? Math.min(100, Math.round((qxp - curLvThresh) / (nextLvThresh - curLvThresh) * 100)) : 100
+              return (
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:9,color:'var(--dim)',marginBottom:3 }}>
+                    <span>XP Quirk</span>
+                    <span style={{ color:'var(--purple-l)' }}>{qxp} {nextLvThresh?`/ ${nextLvThresh}`:' (MÁXIMO)'}</span>
+                  </div>
+                  <div className="pbar" style={{ height:6,borderRadius:3 }}>
+                    <div className="pbar-fill" style={{ width:`${barPct}%`,background:'linear-gradient(90deg,var(--purple),var(--blue-l))',borderRadius:3 }}/>
+                  </div>
+                  <div style={{ fontSize:9,color:'var(--dim)',marginTop:3 }}>
+                    XP por técnica: Nv1=5 · Nv2=12 · Nv3=25 · Nv4=50
+                  </div>
+                </div>
+              )
+            })()}
             {EVOLUTION_THRESHOLDS.map(evo=>(
               <div key={evo.level} style={{ display:'flex',alignItems:'center',gap:10,marginBottom:8,opacity:quirkLevel>=evo.level?1:0.3 }}>
                 <div style={{ width:30,height:30,borderRadius:'50%',background:quirkLevel>=evo.level?evo.color:'var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Orbitron,monospace',fontSize:10,fontWeight:700,color:quirkLevel>=evo.level?'#000':'var(--dim)',flexShrink:0 }}>{evo.level}</div>

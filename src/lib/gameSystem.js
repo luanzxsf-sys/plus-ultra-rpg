@@ -276,3 +276,33 @@ export function getTraitAttrBonus(traits, attrKey) {
     return sum + (e.attr===attrKey ? (e.bonus||0) : 0)
   }, 0)
 }
+
+// ── QUIRK XP SYSTEM ───────────────────────────────────────────
+// XP de Quirk é ganho pelo USO de técnicas em combate
+// Técnicas de nível maior dão mais XP apesar do gasto maior
+export const QUIRK_LEVEL_THRESHOLDS = [
+  0,    // Nv1: Iniciante (começa aqui)
+  100,  // Nv2: Intermediário
+  300,  // Nv3: Avançado
+  700,  // Nv4: Mestre
+  1500, // Nv5: Despertado
+]
+
+export function calcQuirkLevel(quirkXp) {
+  let level = 1
+  for (let i = QUIRK_LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (quirkXp >= QUIRK_LEVEL_THRESHOLDS[i]) { level = i + 1; break }
+  }
+  return Math.min(level, 5)
+}
+
+export function quirkXpForNextLevel(currentLevel) {
+  return QUIRK_LEVEL_THRESHOLDS[currentLevel] ?? null  // null = maxed
+}
+
+// XP ganho ao usar uma técnica
+// Técnicas de nível maior dão mais XP proporcionalmente
+export function calcTechQuirkXp(techLevel) {
+  const BASE_XP = [0, 5, 12, 25, 50]  // índice = nível da técnica - 1
+  return BASE_XP[Math.min((techLevel || 1) - 1, BASE_XP.length - 1)]
+}
