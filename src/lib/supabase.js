@@ -65,11 +65,28 @@ export async function setOnline(userId, isOnline) {
 }
 
 export async function getAllProfiles() {
-  const { data, error } = await supabase
+  // Step 1: get all profiles
+  const { data: profiles, error: pErr } = await supabase
     .from('profiles')
-    .select('*, characters(name, alias, avatar_url, avatar_color, rank, quirk_data, hp, hp_max, quirk_charge, quirk_max, xp, xp_max, quirk_level)')
+    .select('*')
     .order('is_online', { ascending: false })
-  return { data, error }
+  if (pErr || !profiles) return { data: profiles, error: pErr }
+
+  // Step 2: get all characters (avoids reverse-FK join issues)
+  const { data: chars } = await supabase
+    .from('characters')
+    .select('user_id, name, alias, avatar_url, avatar_color, rank, specialty, bio, quirk_data, attrs, hp, hp_max, quirk_charge, quirk_max, stamina, stamina_max, xp, xp_max, quirk_level')
+
+  // Step 3: manually attach characters to profiles
+  const charMap = {}
+  ;(chars || []).forEach(c => { charMap[c.user_id] = c })
+
+  const merged = profiles.map(p => ({
+    ...p,
+    characters: charMap[p.id] ? [charMap[p.id]] : []
+  }))
+
+  return { data: merged, error: null }
 }
 
 export async function updateTheme(userId, theme) {
@@ -151,12 +168,24 @@ export async function deleteItem(itemId) {
 // Missões agora podem ser vistas/geridas pelo dono OU por usuários vinculados (assigned_users)
 
 export async function getQuests(userId) {
-  const { data, error } = await supabase
-    .from('quests')
-    .select('*')
-    .or(`user_id.eq.${userId},assigned_users.cs.{${userId}}`)
-    .order('sort_order')
-  return { data: data || [], error }
+  // Get all quests visible to this user (owner or assigned)
+  // Use two queries + merge to avoid .or() crash when assigned_users column is missing
+  const [{ data: owned }, { data: all }] = await Promise.all([
+    supabase.from('quests').select('*').eq('user_id', userId),
+    supabase.from('quests').select('*').order('created_at', { ascending: false }),
+  ])
+  // Merge: show quests owned by user OR where user is in assigned_users
+  const allQ = all || []
+  const visible = allQ.filter(q =>
+    q.user_id === userId ||
+    (Array.isArray(q.assigned_users) && q.assigned_users.includes(userId))
+  )
+  // Sort: active first, then completed
+  visible.sort((a, b) => {
+    if (a.completed === b.completed) return new Date(b.created_at) - new Date(a.created_at)
+    return a.completed ? 1 : -1
+  })
+  return { data: visible, error: null }
 }
 
 export async function getAllQuests() {
