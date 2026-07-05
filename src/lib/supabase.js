@@ -409,8 +409,12 @@ export async function getPresetTraits() {
 }
 
 export async function createCustomTrait(userId, trait) {
+  // Strip UI-only fields (attr_bonus, bonus_value) that are not DB columns
+  // The 'effect' field is already built by the caller from these
+  const { attr_bonus, bonus_value, ...rest } = trait
+  const payload = { ...rest, is_preset: false, created_by: userId }
   const { data, error } = await supabase.from('traits')
-    .insert({ ...trait, is_preset: false, created_by: userId })
+    .insert(payload)
     .select().single()
   return { data, error }
 }

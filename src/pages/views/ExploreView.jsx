@@ -365,22 +365,39 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
   useEffect(()=>{ endRef.current?.scrollIntoView({behavior:'smooth'}) },[messages])
 
   function getMyCombatant() {
-    if (activeNpc) return combatants.find(cb=>cb.npc_id===activeNpc.id)
-    return combatants.find(cb=>cb.user_id===user?.id)
+    if (activeNpc) {
+      // First try to find the NPC as a combatant (added to combat)
+      const npcCombatant = combatants.find(cb => cb.npc_id === activeNpc.id)
+      if (npcCombatant) return npcCombatant
+      // Fall back to the narrator's own combatant so they can act
+      return combatants.find(cb => cb.user_id === user?.id)
+    }
+    return combatants.find(cb => cb.user_id === user?.id)
   }
 
   function getActorInfo() {
-    if (activeNpc) return { name:activeNpc.name, color:activeNpc.avatar_color||'gray', npcId:activeNpc.id }
-    return { name:char?.name||profile?.username||'Herói', color:char?.avatar_color||'purple', npcId:null }
+    // Always use NPC identity for messages when NPC is active
+    if (activeNpc) return {
+      name:  activeNpc.name,
+      color: activeNpc.avatar_color || 'gray',
+      npcId: activeNpc.id,
+      alias: activeNpc.alias || '',
+    }
+    return {
+      name:  char?.name || profile?.username || 'Herói',
+      color: char?.avatar_color || 'purple',
+      npcId: null,
+      alias: char?.alias || '',
+    }
   }
 
   // ── Send plain chat message
   async function handleSend() {
     if (!text.trim()||!user) return
-    const {name,color,npcId} = getActorInfo()
+    const {name,color,npcId,alias} = getActorInfo()
     await sendMessage({
       location_id:loc.id, user_id:user.id,
-      author_name:name, author_alias:activeNpc?(activeNpc.alias||''):(char?.alias||''),
+      author_name:name, author_alias:alias,
       author_color:color, content:text.trim(), mode:'rp', npc_id:npcId,
     })
     setText('')
