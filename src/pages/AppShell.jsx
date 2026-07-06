@@ -50,7 +50,9 @@ export default function AppShell() {
 
   const char  = character
   const theme = profile?.theme || 'dark'
-  const level = calcLevel(char?.xp || 0)
+  // char.level is now stored in DB and updated by addXpToCharacter
+  // Fall back to calcLevel only for old rows that don't have level yet
+  const level = char?.level ?? calcLevel(char?.xp_total ?? char?.xp ?? 0)
   const xpPct = char && char.xp_max > 0 ? Math.min(100, Math.round(char.xp / char.xp_max * 100)) : 0
 
   useEffect(() => { applyTheme(theme) }, [theme])

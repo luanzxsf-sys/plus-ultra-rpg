@@ -204,13 +204,34 @@ export async function upsertQuest(userId, quest) {
 }
 
 export async function completeQuest(questId) {
+  // 1. Fetch the quest with all recipients
+  const { data: quest, error: qErr } = await supabase
+    .from('quests')
+    .select('*')
+    .eq('id', questId)
+    .single()
+  if (qErr || !quest) return { data: null, error: qErr }
+
+  // 2. Mark as completed
   const { data, error } = await supabase
     .from('quests')
-    .update({ completed: true, is_active: false })
+    .update({ completed: true, is_active: false, completed_at: new Date().toISOString() })
     .eq('id', questId)
     .select()
     .single()
-  return { data, error }
+  if (error) return { data, error }
+
+  // 3. Distribute XP to owner + all assigned users
+  const xp = quest.xp_reward || 100
+  const recipients = new Set([quest.user_id, ...(quest.assigned_users || [])])
+    // filter out nulls
+    .values ? [...new Set([quest.user_id, ...(quest.assigned_users || [])].filter(Boolean))] : []
+
+  if (recipients.length > 0) {
+    await addXpToUsers(recipients, xp)
+  }
+
+  return { data, error: null, xpAwarded: xp, recipientCount: recipients.length }
 }
 
 export async function deleteQuest(questId) {
@@ -546,19 +567,59 @@ export async function clearCombatActions(sessionId) {
 }
 
 // ─── LEVEL & XP helpers ─────────────────────────────────────
+// XP model: xp_total is ALWAYS growing (never reset).
+// level and xp_max are derived from xp_total and stored for display.
+// Thresholds: level N costs floor(1000 * 1.25^(N-1)) XP
 
-// Adiciona XP a um personagem e atualiza nível no banco
-export async function addXpToCharacter(userId, xpAmount) {
-  const { data: char, error: fetchErr } = await supabase
-    .from('characters').select('xp, xp_max, quirk_xp, quirk_level').eq('user_id', userId).single()
-  if (fetchErr) return { error: fetchErr }
-  const newXp = (char.xp || 0) + xpAmount
-  const { data, error } = await supabase.from('characters')
-    .update({ xp: newXp }).eq('user_id', userId).select().single()
-  return { data, error }
+function _xpForLevel(level) {
+  return Math.floor(1000 * Math.pow(1.25, level - 1))
 }
 
-// Adiciona XP a múltiplos usuários (missão concluída)
+function _calcLevelFromTotal(xpTotal) {
+  let level = 1, acc = 0
+  while (true) {
+    const needed = _xpForLevel(level)
+    if (acc + needed > xpTotal) break
+    acc += needed
+    level++
+    if (level > 999) break
+  }
+  return { level, xpIntoLevel: xpTotal - acc, xpForThisLevel: _xpForLevel(level) }
+}
+
+// Adds XP to a character. Stores xp_total, updates level + xp/xp_max for display.
+// Also grants +5 attr points per level-up (stored as attr_points_total).
+export async function addXpToCharacter(userId, xpAmount) {
+  // Read current state
+  const { data: char, error: fetchErr } = await supabase
+    .from('characters')
+    .select('xp_total, xp, xp_max, level, attr_points_used')
+    .eq('user_id', userId)
+    .single()
+  if (fetchErr || !char) return { error: fetchErr }
+
+  const oldTotal   = char.xp_total ?? char.xp ?? 0   // fallback for existing rows
+  const newTotal   = oldTotal + xpAmount
+  const oldLevel   = char.level ?? 1
+  const { level: newLevel, xpIntoLevel, xpForThisLevel } = _calcLevelFromTotal(newTotal)
+  const leveledUp  = newLevel > oldLevel
+
+  const { data, error } = await supabase
+    .from('characters')
+    .update({
+      xp_total: newTotal,          // total XP ever earned (never decreases)
+      xp:       xpIntoLevel,       // XP progress within current level (for bar display)
+      xp_max:   xpForThisLevel,    // XP needed for next level
+      level:    newLevel,          // current level
+    })
+    .eq('user_id', userId)
+    .select()
+    .single()
+
+  return { data, error, leveledUp, newLevel, oldLevel }
+}
+
+// Adds XP to multiple users at once (quest complete)
 export async function addXpToUsers(userIds, xpAmount) {
   const results = await Promise.all(
     userIds.map(uid => addXpToCharacter(uid, xpAmount))

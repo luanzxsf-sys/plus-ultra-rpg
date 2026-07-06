@@ -227,7 +227,7 @@ function QuestModal({ quest, onClose, onSaved, userId }) {
 }
 
 export default function QuestsView({ onQuestCountChange }) {
-  const { user } = useAuth()
+  const { user, refreshCharacter } = useAuth()
   const [quests, setQuests]   = useState([])
   const [rep, setRep]         = useState({ civis:0, viloes:0, missoes:0, baixas:0 })
   const [showAdd, setShowAdd] = useState(false)
@@ -251,11 +251,14 @@ export default function QuestsView({ onQuestCountChange }) {
   }
 
   async function handleComplete(quest) {
-    if (!confirm(`Concluir "${quest.title}"?\n+${quest.xp_reward||100} XP para ${quest.assigned_users?.length||0} jogador(es) vinculado(s).`)) return
-    const { error } = await completeQuest(quest.id)
+    const recipients = [...new Set([user.id, ...(quest.assigned_users||[])].filter(Boolean))]
+    if (!confirm(`Concluir "${quest.title}"?\n+${quest.xp_reward||100} XP para ${recipients.length} participante(s).`)) return
+    const { error, xpAwarded } = await completeQuest(quest.id)
     if (error) { notify('❌ ' + error.message, 'error'); return }
-    notify(`🏆 Missão concluída! +${quest.xp_reward||100} XP distribuídos!`, 'success')
+    notify(`🏆 Missão concluída! +${xpAwarded||quest.xp_reward||100} XP distribuídos!`, 'success')
     await updateReputation(user.id, { missoes: (rep.missoes||0) + 1 })
+    // Refresh the local character so level + XP bar update immediately
+    await refreshCharacter()
     load()
   }
 

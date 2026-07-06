@@ -100,7 +100,7 @@ export default function RankingView() {
           {podiumOrder.map((e,pi)=>{
             if(!e) return <div key={pi}/>
             const isFirst=top3.indexOf(e)===0
-            const level=calcLevel(e.points||0)
+            const level=e.level ?? calcLevel(e.xp_total ?? e.points ?? 0)
             return(
               <div key={e.id} onDoubleClick={()=>{setEditEntry(e);setShowAdd(true)}}
                 style={{background:'var(--card)',border:`1px solid ${isFirst?'rgba(255,179,0,.4)':'var(--border)'}`,borderRadius:9,padding:isFirst?'18px 12px':'14px 10px',textAlign:'center',cursor:'pointer',transition:'all .2s'}}
@@ -122,7 +122,7 @@ export default function RankingView() {
       {rest.length>0&&(
         <div style={{display:'flex',flexDirection:'column',gap:5}}>
           {rest.map((e,i)=>{
-            const level=calcLevel(e.points||0)
+            const level=e.level ?? calcLevel(e.xp_total ?? e.points ?? 0)
             return(
               <div key={e.id} onDoubleClick={()=>{setEditEntry(e);setShowAdd(true)}}
                 style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:7,padding:'9px 12px',display:'flex',alignItems:'center',gap:10,cursor:'pointer',transition:'all .2s'}}

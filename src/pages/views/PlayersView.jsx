@@ -7,7 +7,7 @@ import { gradeLabel, gradeColor, calcLevel, ATTR_META, ATTR_KEYS, QUIRK_TYPE_BON
 // ── PROFILE DETAIL MODAL ──────────────────────────────────────
 function PlayerDetailModal({ p, onClose, isMe }) {
   const char  = p.characters?.[0]
-  const level = calcLevel(char?.xp || 0)
+  const level = char?.level ?? calcLevel(char?.xp_total ?? char?.xp ?? 0)
   const xpPct = (char?.xp_max > 0) ? Math.min(100, Math.round((char.xp / char.xp_max) * 100)) : 0
 
   return (
@@ -162,7 +162,7 @@ function PlayerDetailModal({ p, onClose, isMe }) {
 // ── PLAYER CARD ───────────────────────────────────────────────
 function PlayerCard({ p, isMe, onSelect }) {
   const char  = p.characters?.[0]
-  const level = calcLevel(char?.xp || 0)
+  const level = char?.level ?? calcLevel(char?.xp_total ?? char?.xp ?? 0)
 
   return (
     <div onClick={onSelect}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase, setOnline, getProfile, getCharacter } from '../lib/supabase'
 
 const AuthContext = createContext(null)
@@ -36,7 +36,10 @@ export function AuthProvider({ children }) {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+      window.__charSub?.unsubscribe()
+    }
   }, [])
 
   // Mark offline on tab close
@@ -56,6 +59,21 @@ export function AuthProvider({ children }) {
     setProfile(prof)
     setCharacter(char)
     setLoading(false)
+
+    // Subscribe to realtime character updates so XP/level refresh automatically
+    const charSub = supabase.channel(`char-${userId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'characters',
+        filter: `user_id=eq.${userId}`,
+      }, ({ new: updated }) => {
+        setCharacter(updated)
+      })
+      .subscribe()
+
+    // Store ref for cleanup (attach to window to survive re-renders)
+    window.__charSub = charSub
   }
 
   async function refreshProfile() {

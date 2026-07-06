@@ -556,3 +556,44 @@ ALTER TABLE public.characters
 -- ── Sistema de XP de Quirk por uso de técnicas ──
 -- Thresholds: Iniciante=0, Intermediário=100, Avançado=300, Mestre=700, Despertado=1500
 -- O frontend calcula e atualiza quirk_xp e quirk_level diretamente via addQuirkXp()
+
+-- ── PATCH v3.2: xp_total e level como colunas reais ──
+-- xp_total: XP acumulado total (nunca decresce)
+-- level: nível atual (calculado e salvo pelo frontend via addXpToCharacter)
+-- xp: XP dentro do nível atual (para a barra de progresso)
+-- xp_max: XP necessário para o próximo nível
+
+ALTER TABLE public.characters
+  ADD COLUMN IF NOT EXISTS xp_total int DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS level    int DEFAULT 1;
+
+-- Migrar dados existentes: copiar xp atual para xp_total se xp_total for 0
+UPDATE public.characters
+  SET xp_total = xp
+  WHERE xp_total = 0 AND xp > 0;
+
+-- Desabilitar o trigger de levelup (o frontend agora gerencia isso)
+-- O trigger estava usando xp como "XP do nível" mas o modelo mudou
+DROP TRIGGER IF EXISTS character_levelup ON public.characters;
+DROP FUNCTION IF EXISTS public.handle_character_levelup();
+
+-- Trigger simplificado: só garante updated_at
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Re-aplicar updated_at trigger se necessário
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'set_characters_updated_at'
+  ) THEN
+    CREATE TRIGGER set_characters_updated_at
+      BEFORE UPDATE ON public.characters
+      FOR EACH ROW EXECUTE PROCEDURE public.set_updated_at();
+  END IF;
+END $$;
