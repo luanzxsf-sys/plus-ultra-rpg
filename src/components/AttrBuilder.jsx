@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { gradeLabel, gradeColor, ATTR_META, ATTR_KEYS, calcDerived, calcEffectiveAttrs, SPECIALTIES } from '../lib/gameSystem'
 
 const BASE_POINTS = 60
-const POINTS_PER_LEVEL = 5  // bonus points per level above 1
+const POINTS_PER_LEVEL = 3  // +3 attribute points per level above 1
 const ATTR_MIN = 1
 
 export default function AttrBuilder({
@@ -60,7 +60,9 @@ export default function AttrBuilder({
           </div>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:10, color:'var(--muted)', marginBottom:6 }}>
-              Distribua {maxPoints} pts · <span style={{ color:'var(--gold)' }}>Resistência +5HP · Controle +5Quirk · Stamina +3Stamina</span>
+              Distribua <strong style={{color:'var(--text-h)'}}>{maxPoints}</strong> pts
+              {(charLevel||1) > 1 && <span style={{color:'var(--blue-l)',marginLeft:4}}>(60 base + {((charLevel||1)-1)*POINTS_PER_LEVEL} de nível {charLevel||1})</span>}
+              <br/><span style={{color:'var(--gold)',fontSize:9}}>Resistência +5HP · Controle +5Quirk · Stamina +3Stamina</span>
             </div>
             <div style={{ display:'flex', gap:4, alignItems:'center' }}>
               <span style={{ fontSize:9, color:'var(--dim)', textTransform:'uppercase', letterSpacing:.5 }}>Passo:</span>

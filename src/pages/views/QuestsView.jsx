@@ -253,9 +253,12 @@ export default function QuestsView({ onQuestCountChange }) {
   async function handleComplete(quest) {
     const recipients = [...new Set([user.id, ...(quest.assigned_users||[])].filter(Boolean))]
     if (!confirm(`Concluir "${quest.title}"?\n+${quest.xp_reward||100} XP para ${recipients.length} participante(s).`)) return
-    const { error, xpAwarded } = await completeQuest(quest.id)
+    const { error, xpAwarded, leveledUp, newLevel } = await completeQuest(quest.id, user.id)
     if (error) { notify('❌ ' + error.message, 'error'); return }
     notify(`🏆 Missão concluída! +${xpAwarded||quest.xp_reward||100} XP distribuídos!`, 'success')
+    if (leveledUp) {
+      setTimeout(() => notify(`⬆️ LEVEL UP! Você é agora Nível ${newLevel}! Distribua seus novos pontos na Ficha.`, 'success'), 800)
+    }
     await updateReputation(user.id, { missoes: (rep.missoes||0) + 1 })
     // Refresh the local character so level + XP bar update immediately
     await refreshCharacter()

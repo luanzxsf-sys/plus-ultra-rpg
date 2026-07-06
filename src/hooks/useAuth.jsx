@@ -60,19 +60,22 @@ export function AuthProvider({ children }) {
     setCharacter(char)
     setLoading(false)
 
-    // Subscribe to realtime character updates so XP/level refresh automatically
-    const charSub = supabase.channel(`char-${userId}`)
+    // Subscribe to realtime character updates - refetch full row on change
+    // (Supabase realtime sends only changed columns by default, not the full row)
+    const charSub = supabase.channel(`char-rt-${userId}`)
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'characters',
         filter: `user_id=eq.${userId}`,
-      }, ({ new: updated }) => {
-        setCharacter(updated)
+      }, async () => {
+        // Always do a full refetch to get the complete character object
+        const { data: freshChar } = await getCharacter(userId)
+        if (freshChar) setCharacter(freshChar)
       })
       .subscribe()
 
-    // Store ref for cleanup (attach to window to survive re-renders)
+    // Store ref for cleanup
     window.__charSub = charSub
   }
 

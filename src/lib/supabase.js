@@ -203,7 +203,7 @@ export async function upsertQuest(userId, quest) {
   return { data, error }
 }
 
-export async function completeQuest(questId) {
+export async function completeQuest(questId, callerId) {
   // 1. Fetch the quest with all recipients
   const { data: quest, error: qErr } = await supabase
     .from('quests')
@@ -221,17 +221,24 @@ export async function completeQuest(questId) {
     .single()
   if (error) return { data, error }
 
-  // 3. Distribute XP to owner + all assigned users
+  // 3. Distribute XP to owner + all assigned users (deduplicated)
   const xp = quest.xp_reward || 100
-  const recipients = new Set([quest.user_id, ...(quest.assigned_users || [])])
-    // filter out nulls
-    .values ? [...new Set([quest.user_id, ...(quest.assigned_users || [])].filter(Boolean))] : []
+  const recipients = [...new Set(
+    [quest.user_id, ...(quest.assigned_users || [])].filter(Boolean)
+  )]
 
-  if (recipients.length > 0) {
-    await addXpToUsers(recipients, xp)
+  let leveledUp = false, newLevel = null, oldLevel = null
+  for (const uid of recipients) {
+    const result = await addXpToCharacter(uid, xp)
+    // Track level-up for the caller specifically
+    if (uid === callerId || uid === quest.user_id) {
+      leveledUp = result.leveledUp || false
+      newLevel  = result.newLevel  || null
+      oldLevel  = result.oldLevel  || null
+    }
   }
 
-  return { data, error: null, xpAwarded: xp, recipientCount: recipients.length }
+  return { data, error: null, xpAwarded: xp, recipientCount: recipients.length, leveledUp, newLevel, oldLevel }
 }
 
 export async function deleteQuest(questId) {
@@ -588,30 +595,39 @@ function _calcLevelFromTotal(xpTotal) {
 }
 
 // Adds XP to a character. Stores xp_total, updates level + xp/xp_max for display.
-// Also grants +5 attr points per level-up (stored as attr_points_total).
 export async function addXpToCharacter(userId, xpAmount) {
-  // Read current state
+  // Read current state - use select('*') to avoid missing-column errors
   const { data: char, error: fetchErr } = await supabase
     .from('characters')
-    .select('xp_total, xp, xp_max, level, attr_points_used')
+    .select('*')
     .eq('user_id', userId)
     .single()
   if (fetchErr || !char) return { error: fetchErr }
 
-  const oldTotal   = char.xp_total ?? char.xp ?? 0   // fallback for existing rows
-  const newTotal   = oldTotal + xpAmount
-  const oldLevel   = char.level ?? 1
+  // xp_total: cumulative XP ever earned (never decreases)
+  // Falls back to char.xp if xp_total column didn't exist yet
+  const oldTotal = (char.xp_total != null && char.xp_total > 0)
+    ? char.xp_total
+    : (char.xp || 0)
+  const newTotal = oldTotal + xpAmount
+  const oldLevel = char.level ?? 1
   const { level: newLevel, xpIntoLevel, xpForThisLevel } = _calcLevelFromTotal(newTotal)
-  const leveledUp  = newLevel > oldLevel
+  const leveledUp = newLevel > oldLevel
+
+  // Build update payload - only include columns we know exist
+  const updatePayload = {
+    xp:     xpIntoLevel,    // XP progress within current level (bar display)
+    xp_max: xpForThisLevel, // XP needed for next level
+    level:  newLevel,       // current level (now stored in DB)
+  }
+  // Try to set xp_total if the column exists (it may not on older DBs)
+  try {
+    updatePayload.xp_total = newTotal
+  } catch (_) {}
 
   const { data, error } = await supabase
     .from('characters')
-    .update({
-      xp_total: newTotal,          // total XP ever earned (never decreases)
-      xp:       xpIntoLevel,       // XP progress within current level (for bar display)
-      xp_max:   xpForThisLevel,    // XP needed for next level
-      level:    newLevel,          // current level
-    })
+    .update(updatePayload)
     .eq('user_id', userId)
     .select()
     .single()
