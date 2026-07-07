@@ -597,3 +597,11 @@ BEGIN
       FOR EACH ROW EXECUTE PROCEDURE public.set_updated_at();
   END IF;
 END $$;
+
+-- ── PATCH v3.3: pending actions — coluna dc ──
+ALTER TABLE public.combat_actions
+  ADD COLUMN IF NOT EXISTS dc           int  DEFAULT 12,
+  ADD COLUMN IF NOT EXISTS pending_for  uuid[] DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS resolved_by  uuid[] DEFAULT '{}';
+-- resolved_by: quais combatant ids já responderam
+-- pending_for: quais combatant ids ainda precisam responder

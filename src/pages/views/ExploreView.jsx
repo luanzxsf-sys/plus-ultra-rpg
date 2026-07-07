@@ -32,10 +32,18 @@ const ACTION_MSG_CLASS = {
 // ─────────────────────────────────────────────
 function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
   actionMode, setActionMode, charSkills, showSkillMenu, setShowSkillMenu,
-  declareAction, setShowCombatSetup, user, activeNpc, hpColor, getActionType, session, isMobile }) {
+  declareAction, setShowCombatSetup, user, activeNpc, hpColor, getActionType, session, isMobile,
+  pendingActions, onRespondPending }) {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+      {/* Pending Actions — shown at top of panel */}
+      {(pendingActions||[]).filter(a=>!a.resolved).map(pa=>(
+        <PendingActionBanner key={pa.id} action={pa} combatants={combatants}
+          myUserId={user?.id} activeNpcId={activeNpc?.id}
+          onRespond={onRespondPending||(() => {})}/>
+      ))}
+
       {/* Combatants list */}
       <div style={{ padding:10, borderBottom:'1px solid var(--border)', flexShrink:0 }}>
         <div style={{ fontFamily:'Bangers,cursive', fontSize:12, letterSpacing:2, color:'var(--red-l)', marginBottom:6, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -226,49 +234,125 @@ function LocationsGrid({ locations, onSelect, onAdd, onEdit, onDelete }) {
 // PENDING ACTION BANNER
 // ─────────────────────────────────────────────
 function PendingActionBanner({ action, combatants, myUserId, activeNpcId, onRespond }) {
-  const actor    = combatants.find(c=>c.id===action.actor_id)
-  const targets  = (action.pending_for||[])
-  const myIds    = combatants.filter(c=>c.user_id===myUserId||(activeNpcId&&c.npc_id===activeNpcId)).map(c=>c.id)
-  const isTarget = targets.some(id=>myIds.includes(id))
-  const atMeta   = ATTR_META[action.attr_check]
+  const actor      = combatants.find(c => c.id === action.actor_id)
+  const targets    = action.pending_for || []
+  const resolvedBy = action.resolved_by || []
+  const myIds      = combatants
+    .filter(c => c.user_id === myUserId || (activeNpcId && c.npc_id === activeNpcId))
+    .map(c => c.id)
+  const iAmTarget   = targets.some(id => myIds.includes(id))
+  const iResponded  = resolvedBy.some(id => myIds.includes(id))
+  const atMeta      = ATTR_META[action.attr_check]
+  const remaining   = targets.filter(id => !resolvedBy.includes(id))
+  const allResolved = remaining.length === 0 && targets.length > 0
 
-  if (!isTarget && !action.is_pending) return null
+  // Show to everyone in the combat while it has unresolved targets
+  if (!action.is_pending || (action.resolved && allResolved)) return null
 
   return (
     <div style={{
-      margin:'4px 12px', padding:'10px 12px',
-      background:'rgba(237,66,69,.08)', border:'1px solid rgba(237,66,69,.35)',
-      borderRadius:8, flexShrink:0
+      margin:'6px 10px', padding:'12px 14px',
+      background:'rgba(237,66,69,.06)',
+      border:'2px solid rgba(237,66,69,.5)',
+      borderRadius:10, flexShrink:0,
+      boxShadow:'0 2px 12px rgba(237,66,69,.2)',
+      animation:'pendingPulse 2s ease infinite',
     }}>
-      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-        <span style={{ fontSize:9, fontWeight:700, padding:'2px 7px', background:'rgba(237,66,69,.2)', color:'var(--red-l)', borderRadius:3, textTransform:'uppercase', letterSpacing:1 }}>
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, flexWrap:'wrap' }}>
+        <span style={{ fontSize:9, fontWeight:700, padding:'3px 8px', background:'rgba(237,66,69,.25)', color:'var(--red-l)', borderRadius:4, textTransform:'uppercase', letterSpacing:1.5, flexShrink:0 }}>
           ⚠️ AÇÃO PENDENTE
         </span>
-        <span style={{ fontSize:10, color:'var(--muted)' }}>
-          {actor?.character_name} declara: <strong style={{ color:'var(--text-h)' }}>{action.description}</strong>
+        <span style={{ fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:13, color:'var(--text-h)' }}>
+          {actor?.character_name || action.actor_name}
         </span>
+        {action.action_type === 'attack' && <span style={{ fontSize:10, color:'var(--red-l)' }}>⚔️ Ataca</span>}
+        {action.action_type === 'skill'  && <span style={{ fontSize:10, color:'var(--purple-l)' }}>✨ {action.skill_name}</span>}
+        {action.action_type === 'intel'  && <span style={{ fontSize:10, color:'var(--gold)' }}>🧠 Investiga</span>}
+        {action.action_type === 'charisma' && <span style={{ fontSize:10, color:'var(--pink-l)' }}>💬 Convence</span>}
       </div>
+
+      {/* Description */}
+      <div style={{ fontSize:11, color:'var(--muted)', lineHeight:1.5, marginBottom:8, fontStyle:'italic' }}>
+        "{action.description}"
+      </div>
+
+      {/* Roll requirement */}
       {action.attr_check && (
-        <div style={{ fontSize:10, color:'var(--gold)', marginBottom:6 }}>
-          Requer roll de <strong>{atMeta?.label||action.attr_check}</strong> — DC {action.dc||'?'} ({action.difficulty})
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 9px', background:'rgba(255,179,0,.08)', borderRadius:5, border:'1px solid rgba(255,179,0,.2)', marginBottom:8 }}>
+          <span style={{ fontSize:18 }}>🎲</span>
+          <div>
+            <div style={{ fontSize:10, color:'var(--gold)', fontWeight:700 }}>
+              Roll de {atMeta?.label || action.attr_check} exigido
+            </div>
+            <div style={{ fontSize:9, color:'var(--dim)' }}>
+              DC {action.dc || 12} · {ROLL_DIFFICULTIES.find(r=>r.key===action.difficulty)?.label || action.difficulty}
+            </div>
+          </div>
         </div>
       )}
-      {isTarget && !action.resolved && (
-        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-          <button className="btn btn-sm" style={{ background:'rgba(34,211,238,.15)', color:'var(--teal-l)', border:'1px solid rgba(34,211,238,.3)' }}
-            onClick={()=>onRespond('dodge', action)}>💨 Desviar (Agilidade)</button>
-          <button className="btn btn-sm" style={{ background:'rgba(88,101,242,.15)', color:'var(--blue-l)', border:'1px solid rgba(88,101,242,.3)' }}
-            onClick={()=>onRespond('defend', action)}>🛡️ Defender (Resistência)</button>
-          {action.attr_check && action.attr_check!=='agilidade' && action.attr_check!=='resistencia' && (
-            <button className="btn btn-sm" style={{ background:'rgba(155,89,182,.15)', color:'var(--purple-l)', border:'1px solid rgba(155,89,182,.3)' }}
-              onClick={()=>onRespond(action.attr_check, action)}>🎲 Rolar {atMeta?.label}</button>
-          )}
-          <button className="btn btn-sm" style={{ background:'rgba(237,66,69,.1)', color:'var(--red-l)', border:'1px solid rgba(237,66,69,.2)' }}
-            onClick={()=>onRespond('take', action)}>💥 Absorver dano</button>
+
+      {/* Targets status */}
+      <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8, alignItems:'center' }}>
+        <span style={{ fontSize:9, color:'var(--dim)' }}>Alvos:</span>
+        {targets.map(tid => {
+          const cb = combatants.find(c => c.id === tid)
+          const responded = resolvedBy.includes(tid)
+          return (
+            <span key={tid} style={{ fontSize:9, padding:'2px 7px', borderRadius:3, fontWeight:700,
+              background: responded ? 'rgba(59,165,93,.2)' : 'rgba(237,66,69,.2)',
+              color: responded ? 'var(--green-l)' : 'var(--red-l)',
+              border: `1px solid ${responded ? 'rgba(59,165,93,.3)' : 'rgba(237,66,69,.3)'}`,
+            }}>
+              {responded ? '✓ ' : '⏳ '}{cb?.character_name || '?'}
+            </span>
+          )
+        })}
+      </div>
+
+      {/* My response buttons */}
+      {iAmTarget && !iResponded && (
+        <div>
+          <div style={{ fontSize:10, color:'var(--text-h)', fontWeight:700, marginBottom:6 }}>
+            🎯 Você foi alvo! Escolha sua resposta:
+          </div>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            <button className="btn" style={{ padding:'8px 12px', background:'rgba(34,211,238,.15)', color:'var(--teal-l)', border:'1px solid rgba(34,211,238,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+              onClick={()=>onRespond('dodge', action)}>
+              💨 Desviar<br/><span style={{fontSize:9,fontWeight:400}}>Roll Agilidade</span>
+            </button>
+            <button className="btn" style={{ padding:'8px 12px', background:'rgba(88,101,242,.15)', color:'var(--blue-l)', border:'1px solid rgba(88,101,242,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+              onClick={()=>onRespond('defend', action)}>
+              🛡️ Defender<br/><span style={{fontSize:9,fontWeight:400}}>Roll Resistência</span>
+            </button>
+            {action.attr_check && !['agilidade','resistencia'].includes(action.attr_check) && (
+              <button className="btn" style={{ padding:'8px 12px', background:'rgba(155,89,182,.15)', color:'var(--purple-l)', border:'1px solid rgba(155,89,182,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+                onClick={()=>onRespond(action.attr_check, action)}>
+                🎲 Rolar {atMeta?.label}<br/><span style={{fontSize:9,fontWeight:400}}>DC {action.dc||12}</span>
+              </button>
+            )}
+            <button className="btn" style={{ padding:'8px 12px', background:'rgba(237,66,69,.12)', color:'var(--red-l)', border:'1px solid rgba(237,66,69,.35)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+              onClick={()=>onRespond('take', action)}>
+              💥 Absorver<br/><span style={{fontSize:9,fontWeight:400}}>Dano completo</span>
+            </button>
+          </div>
         </div>
       )}
-      {action.resolved && (
-        <div style={{ fontSize:10, color:'var(--green-l)', fontWeight:700 }}>✓ Resolvida</div>
+
+      {/* Already responded */}
+      {iAmTarget && iResponded && (
+        <div style={{ fontSize:11, color:'var(--green-l)', fontWeight:700 }}>
+          ✓ Você já respondeu — aguardando os outros alvos...
+        </div>
+      )}
+
+      {/* Not a target — observer view */}
+      {!iAmTarget && (
+        <div style={{ fontSize:10, color:'var(--dim)', fontStyle:'italic' }}>
+          {remaining.length > 0
+            ? `Aguardando ${remaining.length} alvo(s) responder...`
+            : '✓ Todos responderam'}
+        </div>
       )}
     </div>
   )
@@ -548,68 +632,117 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
     setText('')
   }
 
-  // ── Resolve a pending action
+  // ── Resolve a pending action (individual per target)
   async function respondToPending(responseType, pendingAction) {
     const me = getMyCombatant()
-    if (!me) return
-    const roll   = rollD(20)
-    const attrV  = me.attrs?.[responseType==='dodge'?'agilidade':responseType==='defend'?'resistencia':responseType]||0
-    const dc     = pendingAction.dc||12
-    const result = resolveAttributeRoll(attrV, roll, dc)
+    if (!me) { notify('Você não está no combate','error'); return }
 
-    let desc='', dmgTaken=0
-    const actor = combatants.find(c=>c.id===pendingAction.actor_id)
+    const roll     = rollD(20)
+    const attrKey  = responseType==='dodge' ? 'agilidade' : responseType==='defend' ? 'resistencia' : responseType
+    const attrV    = me.attrs?.[attrKey] || 0
+    const dc       = pendingAction.dc || 12
+    const result   = resolveAttributeRoll(attrV, roll, dc)
+    const actor    = combatants.find(c => c.id === pendingAction.actor_id)
+    const rollDisp = roll + Math.floor(attrV / 3)
 
-    if (responseType==='take') {
-      // Player absorbs full damage
-      const baseDmg = Math.floor(Math.random()*12)+1+(actor?.attrs?.forca||0)
-      dmgTaken = baseDmg
+    let desc = '', dmgTaken = 0
+
+    if (responseType === 'take') {
+      // Absorb full damage — no roll
+      const atk   = actor?.attrs?.forca || 0
+      const skill = pendingAction.skill_name ? charSkills.find(s=>s.name===pendingAction.skill_name) : null
+      dmgTaken = rollD(8) + atk + (skill ? (skill.level||1)*3 : 0)
       await applyCombatEffect(me.id, -dmgTaken)
-      desc = `💥 ${me.character_name} absorve o golpe — ${dmgTaken} de dano!`
-    } else if (responseType==='dodge') {
-      desc = result.success
-        ? `💨 D20=${roll}+AGI=${attrV} (${roll+Math.floor(attrV/3)}) — ${me.character_name} DESVIA! [${result.label}]`
-        : `💨 D20=${roll}+AGI=${attrV} (${roll+Math.floor(attrV/3)}) — Falha ao desviar. [${result.label}]`
-      if (!result.success) {
-        dmgTaken = Math.floor(Math.random()*8)+1+(actor?.attrs?.forca||0)
+      desc = `💥 ${me.character_name} absorve o golpe diretamente — ${dmgTaken} de dano!`
+
+    } else if (responseType === 'dodge') {
+      if (result.success) {
+        desc = `💨 D20=${roll}+AGI=${attrV}=${rollDisp} vs DC${dc} — ${me.character_name} DESVIA! (${result.label})`
+        // No damage on success
+      } else {
+        const atk = actor?.attrs?.forca || 0
+        dmgTaken  = result.degree === 'partial'
+          ? Math.max(1, Math.floor((rollD(8) + atk) * 0.5))  // partial = half damage
+          : rollD(8) + atk                                    // fail = full damage
         await applyCombatEffect(me.id, -dmgTaken)
-        desc += ` — ${dmgTaken} de dano recebido!`
+        desc = `💨 D20=${roll}+AGI=${attrV}=${rollDisp} vs DC${dc} — ${result.label}. ${dmgTaken} de dano recebido!`
       }
-    } else if (responseType==='defend') {
-      const reduction = result.success ? Math.floor((me.attrs?.resistencia||0)*0.5) : 0
-      dmgTaken = Math.max(0, Math.floor(Math.random()*8)+1+(actor?.attrs?.forca||0)-reduction)
+
+    } else if (responseType === 'defend') {
+      const atk       = actor?.attrs?.forca || 0
+      const reduction = result.success
+        ? Math.floor((me.attrs?.resistencia || 0) * (result.degree==='great' ? 0.75 : 0.5))
+        : 0
+      dmgTaken = Math.max(0, rollD(8) + atk - reduction)
       await applyCombatEffect(me.id, -dmgTaken)
       desc = result.success
-        ? `🛡️ D20=${roll}+RES=${attrV} — ${me.character_name} reduz dano! −${reduction} → ${dmgTaken} recebido. [${result.label}]`
-        : `🛡️ D20=${roll}+RES=${attrV} — Defesa insuficiente! ${dmgTaken} de dano. [${result.label}]`
+        ? `🛡️ D20=${roll}+RES=${attrV}=${rollDisp} vs DC${dc} — Defesa! −${reduction} reduzido. ${dmgTaken} de dano. (${result.label})`
+        : `🛡️ D20=${roll}+RES=${attrV}=${rollDisp} vs DC${dc} — Defesa falhou! ${dmgTaken} de dano. (${result.label})`
+
     } else {
-      // Generic attribute check
-      desc = result.success
-        ? `🎲 D20=${roll}+${ATTR_META[responseType]?.label||responseType}=${attrV} — ${me.character_name}: ${result.label} (${roll+Math.floor(attrV/3)} vs DC${dc})`
-        : `🎲 D20=${roll}+${ATTR_META[responseType]?.label||responseType}=${attrV} — ${me.character_name}: ${result.label} (${roll+Math.floor(attrV/3)} vs DC${dc})`
+      // Generic attribute roll (intel, carisma, controle, etc.)
+      const atLabel = ATTR_META[attrKey]?.label || attrKey
+      desc = `🎲 D20=${roll}+${atLabel}=${attrV}=${rollDisp} vs DC${dc} — ${me.character_name}: ${result.label}`
+      if (!result.success && result.degree !== 'partial') {
+        // Failure on attribute check = applies base damage if it was an attack
+        if (['attack','skill'].includes(pendingAction.action_type)) {
+          dmgTaken = rollD(6) + (actor?.attrs?.forca || 0)
+          await applyCombatEffect(me.id, -dmgTaken)
+          desc += ` — ${dmgTaken} de dano!`
+        }
+      }
     }
 
-    // Mark pending action as resolved
+    // Track who responded using resolved_by array
+    const currentResolvedBy = pendingAction.resolved_by || []
+    const newResolvedBy      = [...new Set([...currentResolvedBy, me.id])]
+    const allTargets         = pendingAction.pending_for || []
+    const allResponded       = allTargets.every(id => newResolvedBy.includes(id))
+
+    // Update the pending action: add me to resolved_by, mark resolved if everyone answered
     await supabase.from('combat_actions')
-      .update({ resolved:true })
+      .update({
+        resolved_by: newResolvedBy,
+        resolved:    allResponded,
+      })
       .eq('id', pendingAction.id)
 
-    // Log response
+    // Log this response
     await addCombatAction({
-      session_id:session.id,
-      actor_id:me.id, actor_name:me.character_name,
-      target_id:pendingAction.actor_id, target_name:actor?.character_name,
-      action_type:responseType, roll_result:roll, value:-dmgTaken,
-      description:desc,
+      session_id:  session.id,
+      actor_id:    me.id,
+      actor_name:  me.character_name,
+      target_id:   pendingAction.actor_id,
+      target_name: actor?.character_name,
+      action_type: responseType,
+      roll_result: roll,
+      value:       -dmgTaken,
+      description: desc,
     })
 
-    // Post in chat
-    const {name,color,npcId} = getActorInfo()
+    // Post in chat with action color
+    const { name, color, npcId, alias } = getActorInfo()
     await sendMessage({
-      location_id:loc.id, user_id:user.id,
-      author_name:name, author_color:color, author_alias:'',
-      content:desc, mode:responseType, npc_id:npcId,
+      location_id:  loc.id,
+      user_id:      user.id,
+      author_name:  name,
+      author_alias: alias,
+      author_color: color,
+      content:      desc,
+      mode:         responseType,
+      npc_id:       npcId,
     })
+
+    if (allResponded) {
+      // Notify that all targets have responded
+      await addCombatAction({
+        session_id:  session.id,
+        actor_name:  'Sistema',
+        action_type: 'system',
+        description: `✅ Todos os alvos responderam à ação de ${actor?.character_name || 'NPC'}.`,
+        value:       0,
+      })
+    }
 
     load()
   }
@@ -822,13 +955,6 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
         </div>
       </div>
 
-      {/* Pending actions */}
-      {pendingActions.filter(a=>!a.resolved).map(pa=>(
-        <PendingActionBanner key={pa.id} action={pa} combatants={combatants}
-          myUserId={user?.id} activeNpcId={activeNpc?.id}
-          onRespond={respondToPending}/>
-      ))}
-
       {/* Body */}
       <div style={{ flex:1, display:'flex', overflow:'hidden', position:'relative' }}>
 
@@ -876,6 +1002,42 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             </div>
           )}
 
+          {/* Mobile: sticky pending alert above input (when I am a target and panel is closed) */}
+          {session&&pendingActions.filter(pa=>{
+            const myIds=combatants.filter(c=>c.user_id===user?.id||(activeNpc&&c.npc_id===activeNpc?.id)).map(c=>c.id)
+            const resolvedBy=pa.resolved_by||[]
+            return !pa.resolved && (pa.pending_for||[]).some(id=>myIds.includes(id)) && !resolvedBy.some(id=>myIds.includes(id))
+          }).length>0&&(
+            <div style={{ padding:'7px 12px',background:'rgba(237,66,69,.12)',borderBottom:'1px solid rgba(237,66,69,.4)',flexShrink:0,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
+              <span style={{ fontSize:11,fontWeight:700,color:'var(--red-l)',flexShrink:0 }}>⚠️ Você está sendo atacado!</span>
+              <button className="btn btn-sm" style={{ background:'rgba(34,211,238,.2)',color:'var(--teal-l)',border:'1px solid rgba(34,211,238,.4)' }}
+                onClick={()=>{
+                  const pa=pendingActions.find(a=>{
+                    const myIds=combatants.filter(c=>c.user_id===user?.id||(activeNpc&&c.npc_id===activeNpc?.id)).map(c=>c.id)
+                    return !a.resolved&&(a.pending_for||[]).some(id=>myIds.includes(id))&&!(a.resolved_by||[]).some(id=>myIds.includes(id))
+                  })
+                  if(pa) respondToPending('dodge',pa)
+                }}>💨 Desviar</button>
+              <button className="btn btn-sm" style={{ background:'rgba(88,101,242,.2)',color:'var(--blue-l)',border:'1px solid rgba(88,101,242,.4)' }}
+                onClick={()=>{
+                  const pa=pendingActions.find(a=>{
+                    const myIds=combatants.filter(c=>c.user_id===user?.id||(activeNpc&&c.npc_id===activeNpc?.id)).map(c=>c.id)
+                    return !a.resolved&&(a.pending_for||[]).some(id=>myIds.includes(id))&&!(a.resolved_by||[]).some(id=>myIds.includes(id))
+                  })
+                  if(pa) respondToPending('defend',pa)
+                }}>🛡️ Defender</button>
+              <button className="btn btn-sm" style={{ background:'rgba(237,66,69,.15)',color:'var(--red-l)',border:'1px solid rgba(237,66,69,.4)' }}
+                onClick={()=>{
+                  const pa=pendingActions.find(a=>{
+                    const myIds=combatants.filter(c=>c.user_id===user?.id||(activeNpc&&c.npc_id===activeNpc?.id)).map(c=>c.id)
+                    return !a.resolved&&(a.pending_for||[]).some(id=>myIds.includes(id))&&!(a.resolved_by||[]).some(id=>myIds.includes(id))
+                  })
+                  if(pa) respondToPending('take',pa)
+                }}>💥 Absorver</button>
+              <button className="btn btn-g btn-sm" style={{ marginLeft:'auto' }} onClick={()=>setShowSkillMenu(true)}>Ver painel ⚔️</button>
+            </div>
+          )}
+
           {/* ── INPUT — sem tabs de ação ── */}
           <div className="chat-input-body" style={{ borderTop:'1px solid var(--border)',padding:'8px 10px' }}>
             {session && (
@@ -914,6 +1076,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                 declareAction={declareAction} setShowCombatSetup={setShowCombatSetup}
                 user={user} activeNpc={activeNpc} hpColor={hpColor} getActionType={getActionType}
                 session={session}
+                pendingActions={pendingActions}
+                onRespondPending={respondToPending}
               />
             </div>
 
@@ -935,6 +1099,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                       setShowCombatSetup={setShowCombatSetup}
                       user={user} activeNpc={activeNpc} hpColor={hpColor} getActionType={getActionType}
                       session={session} isMobile
+                      pendingActions={pendingActions}
+                      onRespondPending={(type,pa)=>{ respondToPending(type,pa); setShowSkillMenu(false) }}
                     />
                   </div>
                 </div>

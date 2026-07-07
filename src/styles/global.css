@@ -570,3 +570,9 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
     display: none !important;
   }
 }
+
+/* ── PENDING ACTION PULSE ── */
+@keyframes pendingPulse {
+  0%,100% { box-shadow: 0 2px 12px rgba(237,66,69,.2); border-color: rgba(237,66,69,.5); }
+  50%      { box-shadow: 0 2px 20px rgba(237,66,69,.45); border-color: rgba(237,66,69,.9); }
+}
