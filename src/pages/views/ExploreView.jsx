@@ -26,6 +26,152 @@ const ACTION_MSG_CLASS = {
   charisma:'msg-charisma', system:'msg-system', roll:'msg-roll',
 }
 
+
+// ─────────────────────────────────────────────
+// COMBAT PANEL (shared between desktop side + mobile overlay)
+// ─────────────────────────────────────────────
+function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
+  actionMode, setActionMode, charSkills, showSkillMenu, setShowSkillMenu,
+  declareAction, setShowCombatSetup, user, activeNpc, hpColor, getActionType, session, isMobile }) {
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+      {/* Combatants list */}
+      <div style={{ padding:10, borderBottom:'1px solid var(--border)', flexShrink:0 }}>
+        <div style={{ fontFamily:'Bangers,cursive', fontSize:12, letterSpacing:2, color:'var(--red-l)', marginBottom:6, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span>COMBATENTES</span>
+          <button className="btn btn-g btn-sm" onClick={()=>setShowCombatSetup(true)} style={{ fontSize:9 }}>+ Add</button>
+        </div>
+        {targetId && (
+          <div style={{ marginBottom:6, padding:'4px 7px', background:'rgba(237,66,69,.1)', borderRadius:4, fontSize:10, color:'var(--red-l)', border:'1px solid rgba(237,66,69,.3)' }}>
+            🎯 <strong>{combatants.find(c=>c.id===targetId)?.character_name}</strong>
+            <button onClick={()=>setTargetId(null)} style={{ float:'right', background:'transparent', border:'none', color:'var(--dim)', cursor:'pointer' }}>✕</button>
+          </div>
+        )}
+        {combatants.length === 0 && (
+          <div style={{ fontSize:10, color:'var(--dim)', textAlign:'center', padding:'8px 0' }}>
+            Nenhum combatente ainda.<br/>Use "+ Add" para adicionar.
+          </div>
+        )}
+        {combatants.map(cb => {
+          const hpPct = cb.hp_max > 0 ? Math.min(100, Math.round(cb.hp/cb.hp_max*100)) : 100
+          const isTarget = cb.id === targetId
+          const isMe = activeNpc ? (cb.npc_id===activeNpc?.id) : (cb.user_id===user?.id)
+          const typeColor = cb.type==='villain'?'var(--red)':cb.type==='npc'?'var(--gold)':'var(--green)'
+          return (
+            <div key={cb.id} className={`combatant-row ${isTarget?'selected':''} ${!cb.is_alive?'dead':''}`}
+              onClick={()=>setTargetId(isTarget?null:cb.id)}>
+              <div style={{ width:26, height:26, borderRadius:'50%', background:avatarBg(cb.avatar_color||'blue'), display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Bangers,cursive', fontSize:10, color:'#fff', flexShrink:0, border:`2px solid ${typeColor}`, overflow:'hidden' }}>
+                {cb.avatar_url ? <img src={cb.avatar_url} alt="" style={{ width:'100%',height:'100%',objectFit:'cover' }}/> : cb.character_name?.[0]||'?'}
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:10, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:!cb.is_alive?'var(--dim)':'var(--text-h)' }}>
+                  {cb.type==='villain'?'💀 ':cb.type==='npc'?'🎭 ':'⚡ '}{cb.character_name}
+                  {isMe && <span style={{ color:'var(--blue-l)', fontSize:8, marginLeft:3 }}>(você)</span>}
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:2 }}>
+                  <div className="hp-mini"><div className="hp-mini-fill" style={{ width:`${hpPct}%`, background:hpColor(hpPct) }}/></div>
+                  <span style={{ fontFamily:'Orbitron,monospace', fontSize:8, color:hpColor(hpPct), flexShrink:0 }}>{cb.hp}/{cb.hp_max}</span>
+                </div>
+              </div>
+              {!cb.is_alive && <span style={{ fontSize:10 }}>💀</span>}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Action buttons */}
+      {myChar && (
+        <div style={{ padding:10, borderBottom:'1px solid var(--border)', flexShrink:0 }}>
+          <div style={{ fontSize:9, color:'var(--dim)', letterSpacing:1, textTransform:'uppercase', marginBottom:7, fontWeight:700 }}>
+            ⚡ AÇÕES {targetId && <span style={{ color:'var(--red-l)' }}>→ {combatants.find(c=>c.id===targetId)?.character_name}</span>}
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:5 }}>
+            {ACTION_TYPES.map(at => (
+              <button key={at.key}
+                onClick={()=>{ setActionMode(actionMode===at.key?null:at.key) }}
+                style={{
+                  padding:'8px 6px', borderRadius:6, border:`1px solid ${actionMode===at.key?at.color:at.color+'44'}`,
+                  background: actionMode===at.key ? at.color+'22' : 'transparent',
+                  color: actionMode===at.key ? at.color : at.color+'99',
+                  cursor:'pointer', fontFamily:'Rajdhani,sans-serif', fontWeight:700,
+                  fontSize:11, textAlign:'center', transition:'all .15s',
+                }}>
+                {at.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Skill submenu */}
+          {charSkills.length > 0 && (
+            <div style={{ marginTop:8 }}>
+              <div style={{ fontSize:9, color:'var(--purple-l)', letterSpacing:1, textTransform:'uppercase', marginBottom:5, fontWeight:700 }}>✨ TÉCNICAS</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                {charSkills.map((sk, i) => (
+                  <button key={i}
+                    onClick={()=>{ declareAction('skill', sk) }}
+                    style={{ padding:'6px 8px', borderRadius:5, border:'1px solid rgba(155,89,182,.4)', background:'rgba(155,89,182,.08)', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', transition:'all .15s' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='rgba(155,89,182,.2)'}
+                    onMouseLeave={e=>e.currentTarget.style.background='rgba(155,89,182,.08)'}>
+                    <span style={{ fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11, color:'var(--purple-l)' }}>
+                      {sk.icon||'⚡'} {sk.name}
+                    </span>
+                    <span style={{ fontFamily:'Orbitron,monospace', fontSize:8, color:'var(--dim)' }}>Nv.{sk.level}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {actionMode && (
+            <div style={{ marginTop:8, padding:'6px 8px', background:`${getActionType(actionMode)?.color||'var(--blue)'}15`, border:`1px solid ${getActionType(actionMode)?.color||'var(--blue)'}44`, borderRadius:5, fontSize:10, color:getActionType(actionMode)?.color||'var(--text)' }}>
+              ✍️ Modo: <strong>{getActionType(actionMode)?.label}</strong> — escreva no chat e envie
+              <button onClick={()=>setActionMode(null)} style={{ float:'right', background:'transparent', border:'none', color:'var(--dim)', cursor:'pointer', fontSize:12 }}>✕</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Vitals */}
+      {myChar && (
+        <div style={{ padding:10, borderBottom:'1px solid var(--border)', flexShrink:0 }}>
+          <div style={{ fontSize:9, color:'var(--muted)', letterSpacing:1, textTransform:'uppercase', marginBottom:6 }}>Vitais</div>
+          {[
+            { l:'HP',    v:myChar.hp,          m:myChar.hp_max,    c:'var(--red-l)' },
+            { l:'Quirk', v:myChar.quirk_charge, m:myChar.quirk_max, c:'var(--purple-l)' },
+          ].map(b => {
+            const p = b.m > 0 ? Math.min(100, Math.round(b.v/b.m*100)) : 100
+            return (
+              <div key={b.l} style={{ marginBottom:5 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:8, color:'var(--dim)', marginBottom:2 }}>
+                  <span>{b.l}</span><span>{b.v}/{b.m}</span>
+                </div>
+                <div className="pbar"><div className="pbar-fill" style={{ width:`${p}%`, background:b.c }}/></div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Combat log */}
+      <div style={{ flex:1, overflowY:'auto', padding:8 }}>
+        <div style={{ fontSize:8, color:'var(--dim)', letterSpacing:2, textTransform:'uppercase', marginBottom:5 }}>LOG</div>
+        {combatLog.length === 0 && <div style={{ fontSize:10, color:'var(--dim)' }}>Sem ações ainda.</div>}
+        {combatLog.slice(-15).map((a, i) => {
+          const at = getActionType(a.action_type)
+          const isPending = a.is_pending && !a.resolved
+          return (
+            <div key={a.id||i} style={{ fontSize:9.5, lineHeight:1.45, marginBottom:5, color:isPending?'var(--gold)':at?.color||'var(--dim)', borderLeft:`2px solid ${isPending?'var(--gold)':at?.color||'var(--border)'}`, paddingLeft:5, opacity:a.resolved?0.5:1 }}>
+              {isPending && '⚠️ '}{a.description}
+              {a.resolved && <span style={{ fontSize:8, color:'var(--green-l)', marginLeft:4 }}>✓</span>}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────
 // LOCATIONS GRID
 // ─────────────────────────────────────────────
@@ -310,7 +456,6 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
   const [showNpcPicker,     setShowNpcPicker]     = useState(false)
   const [showSkillMenu,     setShowSkillMenu]     = useState(false)
   const [showDeclareModal,  setShowDeclareModal]  = useState(false)
-  const [mobilePanel,       setMobilePanel]       = useState('chat')
   const endRef    = useRef(null)
   const subRefs   = useRef([])
   const char = character
@@ -664,10 +809,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             {loc.description&&<div style={{ fontSize:9,color:'rgba(255,255,255,.55)' }}>{loc.description}</div>}
           </div>
           <div style={{ marginLeft:'auto',display:'flex',gap:4,flexWrap:'wrap',alignItems:'center' }}>
-            {session&&<div style={{ display:'flex',gap:2 }}>
-              <button className={`btn btn-sm ${mobilePanel==='chat'?'btn-p':'btn-g'}`} onClick={()=>setMobilePanel('chat')}>💬</button>
-              <button className={`btn btn-sm ${mobilePanel==='combat'?'btn-red':'btn-g'}`} onClick={()=>setMobilePanel('combat')}>⚔️</button>
-            </div>}
+
             {!session&&<button className="btn btn-red btn-sm" onClick={()=>setShowCombatSetup(true)}>⚔️ Iniciar</button>}
             {session&&<button className="btn btn-danger btn-sm" onClick={endCombat}>🏁</button>}
             {session&&isNarrator&&(
@@ -688,10 +830,10 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
       ))}
 
       {/* Body */}
-      <div style={{ flex:1,display:'flex',overflow:'hidden' }}>
+      <div style={{ flex:1, display:'flex', overflow:'hidden', position:'relative' }}>
 
-        {/* CHAT */}
-        <div style={{ flex:1,display:'flex',flexDirection:'column',overflow:'hidden',display:mobilePanel==='combat'?'none':'flex' }} className="chat-main-col">
+        {/* ── CHAT (full width always) ── */}
+        <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }} className="chat-main-col">
           <div className="msgs" style={{ flex:1 }}>
             {messages.map((msg,i)=>{
               const cls=ACTION_MSG_CLASS[msg.mode]||''
@@ -726,39 +868,6 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             </div>
           )}
 
-          {/* Action mode tabs */}
-          {session&&(
-            <div className="chat-input-modes" style={{ overflowX:'auto',flexShrink:0 }}>
-              <button className={`mode-btn ${!actionMode?'active':''}`} onClick={()=>{setActionMode(null);setShowSkillMenu(false)}}>💬 Chat</button>
-              {ACTION_TYPES.map(at=>(
-                <button key={at.key} className={`mode-btn ${actionMode===at.key?'active':''}`}
-                  style={{ color:actionMode===at.key?at.color:'var(--dim)', borderBottomColor:actionMode===at.key?at.color:'transparent' }}
-                  onClick={()=>{ setActionMode(at.key); setShowSkillMenu(false) }}>
-                  {at.label}
-                </button>
-              ))}
-              {charSkills.length>0&&(
-                <button className={`mode-btn ${showSkillMenu?'active':''}`}
-                  style={{ color:showSkillMenu?'var(--purple-l)':'var(--dim)', borderBottomColor:showSkillMenu?'var(--purple)':'transparent' }}
-                  onClick={()=>setShowSkillMenu(s=>!s)}>
-                  ✨ Técnica ▾
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Skill submenu */}
-          {showSkillMenu&&charSkills.length>0&&(
-            <div style={{ display:'flex',gap:5,padding:'6px 10px',borderBottom:'1px solid var(--border)',overflowX:'auto',flexShrink:0 }}>
-              {charSkills.map((sk,i)=>(
-                <button key={i} onClick={()=>{ declareAction('skill',sk); setShowSkillMenu(false) }}
-                  style={{ background:'var(--panel)',border:'1px solid rgba(155,89,182,.4)',borderRadius:5,padding:'5px 9px',cursor:'pointer',whiteSpace:'nowrap',fontSize:10,color:'var(--purple-l)',fontFamily:'Rajdhani,sans-serif',fontWeight:700,flexShrink:0 }}>
-                  {sk.icon||'⚡'} {sk.name} <span style={{ fontSize:8,color:'var(--dim)' }}>Nv.{sk.level}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
           {/* Target indicator */}
           {session&&targetId&&(
             <div style={{ padding:'4px 12px',background:'rgba(237,66,69,.08)',borderBottom:'1px solid rgba(237,66,69,.2)',flexShrink:0,display:'flex',alignItems:'center',gap:8 }}>
@@ -767,105 +876,71 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             </div>
           )}
 
-          {/* Input */}
+          {/* ── INPUT — sem tabs de ação ── */}
           <div className="chat-input-body" style={{ borderTop:'1px solid var(--border)',padding:'8px 10px' }}>
+            {session && (
+              <button
+                className="combat-toggle-btn"
+                onClick={()=>setShowSkillMenu(s=>!s)}
+                style={{ width:36,height:36,borderRadius:8,background:showSkillMenu?'rgba(237,66,69,.2)':'var(--panel)',border:`1px solid ${showSkillMenu?'var(--red)':'var(--border)'}`,color:showSkillMenu?'var(--red-l)':'var(--muted)',cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,transition:'all .15s' }}
+                title="Painel de Combate"
+              >⚔️</button>
+            )}
             <textarea className="chat-textarea" rows={1} value={text}
               onChange={e=>setText(e.target.value)}
               onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();actionMode?declareAction(actionMode):handleSend()} }}
               placeholder={actionMode
-                ? `${getActionType(actionMode)?.label} — descreva...`
+                ? `${getActionType(actionMode)?.label} — descreva e envie...`
                 : activeNpc?`Como ${activeNpc.name}...`:`Chat em ${loc.name}...`}
+              style={{ border: actionMode ? `1px solid ${getActionType(actionMode)?.color||'var(--border)'}` : undefined }}
             />
-            <button className="chat-send" onClick={()=>actionMode?declareAction(actionMode):handleSend()} disabled={!text.trim()&&!actionMode}>↑</button>
+            <button className="chat-send"
+              onClick={()=>actionMode?declareAction(actionMode):handleSend()}
+              disabled={!text.trim()&&!actionMode}
+              style={{ background: actionMode ? getActionType(actionMode)?.color : undefined }}>↑</button>
           </div>
         </div>
 
-        {/* COMBAT PANEL */}
+        {/* ── COMBAT PANEL — fixed right on desktop, overlay on mobile ── */}
         {session&&(
-          <div style={{ width:240,flexShrink:0,borderLeft:'1px solid var(--border)',display:'flex',flexDirection:'column',overflowY:'auto',background:'var(--card)', display:mobilePanel==='chat'?'none':'flex' }} className="chat-right explore-combat">
-            <div style={{ padding:10,borderBottom:'1px solid var(--border)',flexShrink:0 }}>
-              <div style={{ fontFamily:'Bangers,cursive',fontSize:12,letterSpacing:2,color:'var(--red-l)',marginBottom:6,display:'flex',justifyContent:'space-between' }}>
-                <span><span className="live"/>⚔️ COMBATE</span>
-                <button className="btn btn-g btn-sm" onClick={()=>setShowCombatSetup(true)} style={{ fontSize:9 }}>+ Add</button>
-              </div>
-
-              {targetId&&(
-                <div style={{ marginBottom:6,padding:'4px 7px',background:'rgba(237,66,69,.1)',borderRadius:4,fontSize:10,color:'var(--red-l)',border:'1px solid rgba(237,66,69,.3)' }}>
-                  🎯 <strong>{combatants.find(c=>c.id===targetId)?.character_name}</strong>
-                  <button onClick={()=>setTargetId(null)} style={{ float:'right',background:'transparent',border:'none',color:'var(--dim)',cursor:'pointer' }}>✕</button>
-                </div>
-              )}
-
-              {combatants.map(cb=>{
-                const hpPct=cb.hp_max>0?Math.min(100,Math.round(cb.hp/cb.hp_max*100)):100
-                const isTarget=cb.id===targetId
-                const isMe=activeNpc?(cb.npc_id===activeNpc?.id):(cb.user_id===user?.id)
-                const typeColor=cb.type==='villain'?'var(--red)':cb.type==='npc'?'var(--gold)':'var(--green)'
-                return(
-                  <div key={cb.id} className={`combatant-row ${isTarget?'selected':''} ${!cb.is_alive?'dead':''}`} onClick={()=>setTargetId(isTarget?null:cb.id)}>
-                    <div style={{ width:26,height:26,borderRadius:'50%',background:avatarBg(cb.avatar_color||'blue'),display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Bangers,cursive',fontSize:10,color:'#fff',flexShrink:0,border:`2px solid ${typeColor}`,overflow:'hidden' }}>
-                      {cb.avatar_url?<img src={cb.avatar_url} alt="" style={{ width:'100%',height:'100%',objectFit:'cover' }}/>:cb.character_name?.[0]||'?'}
-                    </div>
-                    <div style={{ flex:1,minWidth:0 }}>
-                      <div style={{ fontFamily:'Rajdhani,sans-serif',fontWeight:700,fontSize:10,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:!cb.is_alive?'var(--dim)':'var(--text-h)' }}>
-                        {cb.type==='villain'?'💀 ':cb.type==='npc'?'🎭 ':'⚡ '}{cb.character_name}
-                        {isMe&&<span style={{ color:'var(--blue-l)',fontSize:8,marginLeft:3 }}>(você)</span>}
-                      </div>
-                      <div style={{ display:'flex',alignItems:'center',gap:4,marginTop:2 }}>
-                        <div className="hp-mini"><div className="hp-mini-fill" style={{ width:`${hpPct}%`,background:hpColor(hpPct) }}/></div>
-                        <span style={{ fontFamily:'Orbitron,monospace',fontSize:8,color:hpColor(hpPct),flexShrink:0 }}>{cb.hp}/{cb.hp_max}</span>
-                      </div>
-                    </div>
-                    {!cb.is_alive&&<span style={{ fontSize:10 }}>💀</span>}
-                  </div>
-                )
-              })}
-
-              {/* Mobile action buttons */}
-              {myChar&&(
-                <div style={{ marginTop:8,display:'flex',flexWrap:'wrap',gap:4 }}>
-                  {ACTION_TYPES.slice(0,4).map(at=>(
-                    <button key={at.key} className="btn btn-sm"
-                      style={{ flex:'1 1 calc(50% - 4px)',fontSize:9,background:actionMode===at.key?`${at.color}22`:'transparent',color:at.color,border:`1px solid ${at.color}44`,padding:'5px 4px' }}
-                      onClick={()=>{ setActionMode(at.key); setMobilePanel('chat') }}>
-                      {at.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+          <>
+            {/* Desktop: side panel */}
+            <div className="combat-panel-desktop" style={{ width:240,flexShrink:0,borderLeft:'1px solid var(--border)',display:'flex',flexDirection:'column',overflowY:'auto',background:'var(--card)' }}>
+              <CombatPanel
+                combatants={combatants} combatLog={combatLog}
+                targetId={targetId} setTargetId={setTargetId}
+                myChar={myChar} actionMode={actionMode} setActionMode={setActionMode}
+                charSkills={charSkills} showSkillMenu={showSkillMenu} setShowSkillMenu={setShowSkillMenu}
+                declareAction={declareAction} setShowCombatSetup={setShowCombatSetup}
+                user={user} activeNpc={activeNpc} hpColor={hpColor} getActionType={getActionType}
+                session={session}
+              />
             </div>
 
-            {/* Combat log */}
-            <div style={{ flex:1,overflowY:'auto',padding:8 }}>
-              <div style={{ fontSize:8,color:'var(--dim)',letterSpacing:2,textTransform:'uppercase',marginBottom:5 }}>LOG</div>
-              {combatLog.slice(-15).map((a,i)=>{
-                const at=getActionType(a.action_type)
-                const isPending=a.is_pending&&!a.resolved
-                return(
-                  <div key={a.id||i} style={{ fontSize:9.5,lineHeight:1.45,marginBottom:5,color:isPending?'var(--gold)':at?.color||'var(--dim)',borderLeft:`2px solid ${isPending?'var(--gold)':at?.color||'var(--border)'}`,paddingLeft:5,opacity:a.resolved?0.5:1 }}>
-                    {isPending&&'⚠️ '}{a.description}
-                    {a.resolved&&<span style={{ fontSize:8,color:'var(--green-l)',marginLeft:4 }}>✓</span>}
+            {/* Mobile: floating overlay triggered by ⚔️ button */}
+            {showSkillMenu&&(
+              <div className="combat-panel-mobile-overlay" onClick={e=>e.target===e.currentTarget&&setShowSkillMenu(false)}>
+                <div className="combat-panel-mobile-sheet">
+                  <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:'1px solid var(--border)',flexShrink:0 }}>
+                    <span style={{ fontFamily:'Bangers,cursive',fontSize:16,letterSpacing:2,color:'var(--red-l)' }}><span className="live"/>⚔️ COMBATE</span>
+                    <button onClick={()=>setShowSkillMenu(false)} style={{ background:'transparent',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:20,lineHeight:1 }}>✕</button>
                   </div>
-                )
-              })}
-            </div>
-
-            {/* My vitals */}
-            {myChar&&(
-              <div style={{ padding:10,borderTop:'1px solid var(--border)',flexShrink:0 }}>
-                <div style={{ fontSize:9,color:'var(--muted)',letterSpacing:1,textTransform:'uppercase',marginBottom:5 }}>Vitais</div>
-                {[{l:'HP',v:myChar.hp,m:myChar.hp_max,c:'var(--red-l)'},{l:'Quirk',v:myChar.quirk_charge,m:myChar.quirk_max,c:'var(--purple-l)'}].map(b=>{
-                  const p=b.m>0?Math.min(100,Math.round(b.v/b.m*100)):100
-                  return(
-                    <div key={b.l} style={{ marginBottom:5 }}>
-                      <div style={{ display:'flex',justifyContent:'space-between',fontSize:8,color:'var(--dim)',marginBottom:2 }}><span>{b.l}</span><span>{b.v}/{b.m}</span></div>
-                      <div className="pbar"><div className="pbar-fill" style={{ width:`${p}%`,background:b.c }}/></div>
-                    </div>
-                  )
-                })}
+                  <div style={{ flex:1,overflowY:'auto' }}>
+                    <CombatPanel
+                      combatants={combatants} combatLog={combatLog}
+                      targetId={targetId} setTargetId={setTargetId}
+                      myChar={myChar} actionMode={actionMode} setActionMode={setActionMode}
+                      charSkills={charSkills} showSkillMenu={false} setShowSkillMenu={()=>{}}
+                      declareAction={(key,sk)=>{ declareAction(key,sk); setShowSkillMenu(false) }}
+                      setShowCombatSetup={setShowCombatSetup}
+                      user={user} activeNpc={activeNpc} hpColor={hpColor} getActionType={getActionType}
+                      session={session} isMobile
+                    />
+                  </div>
+                </div>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
 

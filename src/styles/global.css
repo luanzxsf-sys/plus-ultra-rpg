@@ -513,3 +513,60 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
 /* ── UTILS ── */
 .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .no-select { user-select: none; }
+
+/* ── COMBAT PANEL ── */
+.combat-panel-desktop {
+  display: flex;
+  flex-direction: column;
+}
+.combat-panel-mobile-overlay {
+  display: none; /* hidden on desktop */
+}
+
+@media (max-width: 768px) {
+  /* Desktop side panel hidden on mobile */
+  .combat-panel-desktop {
+    display: none !important;
+  }
+  /* Mobile overlay shown when triggered */
+  .combat-panel-mobile-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.6);
+    z-index: 500;
+    backdrop-filter: blur(3px);
+  }
+  .combat-panel-mobile-sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 80dvh;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp .25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  /* On mobile, ⚔️ button in input always visible */
+  .chat-input-body .combat-toggle-btn {
+    display: flex !important;
+  }
+}
+
+/* On desktop, hide ⚔️ button when panel is always visible */
+@media (min-width: 769px) {
+  .chat-input-body .combat-toggle-btn {
+    display: none;
+  }
+  .combat-panel-mobile-overlay {
+    display: none !important;
+  }
+}
