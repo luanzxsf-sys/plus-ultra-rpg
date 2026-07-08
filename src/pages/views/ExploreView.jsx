@@ -33,7 +33,7 @@ const ACTION_MSG_CLASS = {
 function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
   actionMode, setActionMode, charSkills, showSkillMenu, setShowSkillMenu,
   declareAction, setShowCombatSetup, user, activeNpc, hpColor, getActionType, session, isMobile,
-  pendingActions, onRespondPending }) {
+  pendingActions, onRespondPending, discoveredInfo }) {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
@@ -161,6 +161,19 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
         </div>
       )}
 
+      {/* Discovered Info */}
+      {discoveredInfo&&discoveredInfo.length>0&&(
+        <div style={{ padding:10, borderBottom:'1px solid var(--border)', flexShrink:0 }}>
+          <div style={{ fontSize:9, color:'var(--gold)', letterSpacing:1, textTransform:'uppercase', fontWeight:700, marginBottom:6 }}>🔍 INFORMAÇÕES REVELADAS</div>
+          {discoveredInfo.map((d,i)=>(
+            <div key={i} style={{ marginBottom:6, padding:'6px 8px', background:'rgba(255,179,0,.06)', border:'1px solid rgba(255,179,0,.2)', borderRadius:5 }}>
+              <div style={{ fontSize:9, color:'var(--gold)', fontWeight:700, marginBottom:2 }}>{d.actor} · {d.time}</div>
+              <div style={{ fontSize:10, color:'var(--text-h)', lineHeight:1.4 }}>{d.info}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Combat log */}
       <div style={{ flex:1, overflowY:'auto', padding:8 }}>
         <div style={{ fontSize:8, color:'var(--dim)', letterSpacing:2, textTransform:'uppercase', marginBottom:5 }}>LOG</div>
@@ -177,6 +190,136 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
         })}
       </div>
     </div>
+  )
+}
+
+
+// ─────────────────────────────────────────────
+// FREE ROLL MODAL — roll de atributo fora de combate
+// Narrador pode solicitar, qualquer um pode rolar
+// ─────────────────────────────────────────────
+function FreeRollModal({ char, attrs, npcs, combatants, missionDifficulty, onClose, onRolled }) {
+  const [form, setForm] = useState({
+    attrKey:    'inteligencia',
+    difficulty: 'medium',
+    label:      '',          // descrição da situação
+    targetNpc:  '',          // NPC alvo (opcional, para revelar fraqueza)
+  })
+
+  const rollDiffs = ROLL_DIFFICULTIES
+  const dc = missionDifficulty
+    ? adaptRollDC(rollDiffs.find(r=>r.key===form.difficulty)?.dc||12, missionDifficulty)
+    : (rollDiffs.find(r=>r.key===form.difficulty)?.dc||12)
+
+  function handle() {
+    if (!form.label.trim()) { notify('❌ Descreva a situação do roll', 'error'); return }
+    const roll    = Math.floor(Math.random()*20)+1
+    const attrV   = attrs?.[form.attrKey] || 0
+    const result  = resolveAttributeRoll(attrV, roll, dc)
+    const atLabel = ATTR_META[form.attrKey]?.label || form.attrKey
+
+    // Reveal weakness if intel + npc target + success
+    let extra = ''
+    if (form.attrKey==='inteligencia' && form.targetNpc && result.success) {
+      const npc = npcs.find(n=>n.id===form.targetNpc)
+      if (npc?.attrs) {
+        const weak = Object.entries(npc.attrs).sort((a,b)=>a[1]-b[1])[0]
+        if (weak) extra = ` ★ Fraqueza de ${npc.name}: ${ATTR_META[weak[0]]?.label} (${weak[1]})`
+      }
+    }
+
+    const desc = `🎲 Roll de ${atLabel} — ${form.label}
+`
+      + `D20=${roll} + ${atLabel}=${attrV} = ${roll+Math.floor(attrV/3)} vs DC${dc}`
+      + ` — ${result.label}${extra}`
+
+    onRolled({ desc, result, attrKey: form.attrKey, roll, attrV, dc, extra })
+    onClose()
+  }
+
+  return (
+    <Modal title="🎲 Roll de Atributo" onClose={onClose} maxWidth={480}>
+      <div style={{ fontSize:11, color:'var(--muted)', marginBottom:14, lineHeight:1.6 }}>
+        Declare um roll de atributo para qualquer situação — dentro ou fora de combate.
+        O resultado aparece no chat do local.
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+        <div className="field">
+          <label>Atributo</label>
+          <select className="input" value={form.attrKey} onChange={e=>setForm(f=>({...f,attrKey:e.target.value}))}>
+            {Object.entries(ATTR_META).map(([k,v])=>(
+              <option key={k} value={k}>{v.label} {attrs?.[k]!=null?`(${attrs[k]})`:''}</option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label>Dificuldade</label>
+          <select className="input" value={form.difficulty} onChange={e=>setForm(f=>({...f,difficulty:e.target.value}))}>
+            {ROLL_DIFFICULTIES.map(r=>(
+              <option key={r.key} value={r.key}>{r.label} — DC {missionDifficulty ? adaptRollDC(r.dc,missionDifficulty) : r.dc}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* DC preview */}
+      <div style={{ padding:'7px 12px', background:'var(--panel)', borderRadius:6, border:'1px solid var(--border)', marginBottom:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div>
+          <div style={{ fontSize:9, color:'var(--dim)', textTransform:'uppercase', letterSpacing:1, marginBottom:2 }}>DC do Roll</div>
+          <div style={{ fontFamily:'Orbitron,monospace', fontSize:22, fontWeight:700, color:'var(--gold)' }}>{dc}</div>
+        </div>
+        <div style={{ textAlign:'right' }}>
+          <div style={{ fontSize:9, color:'var(--dim)' }}>Seu bônus</div>
+          <div style={{ fontFamily:'Orbitron,monospace', fontSize:16, color:'var(--blue-l)' }}>
+            +{Math.floor((attrs?.[form.attrKey]||0)/3)}
+          </div>
+          {missionDifficulty && (
+            <div style={{ fontSize:9, color:'var(--gold)', marginTop:2 }}>Ajustado pela missão</div>
+          )}
+        </div>
+      </div>
+
+      <div className="field">
+        <label>Situação / Contexto *</label>
+        <input className="input" value={form.label}
+          onChange={e=>setForm(f=>({...f,label:e.target.value}))}
+          placeholder="Ex: Examina o arquivo secreto, Tenta persuadir o guarda..."/>
+      </div>
+
+      {/* NPC target for intel reveal */}
+      {form.attrKey === 'inteligencia' && (
+        <div className="field">
+          <label>🎯 Analisar NPC (para revelar fraqueza no sucesso)</label>
+          <select className="input" value={form.targetNpc} onChange={e=>setForm(f=>({...f,targetNpc:e.target.value}))}>
+            <option value="">— Sem alvo específico —</option>
+            {npcs.map(n=><option key={n.id} value={n.id}>{n.name} ({n.role})</option>)}
+          </select>
+        </div>
+      )}
+
+      {/* Chance preview */}
+      <div style={{ marginBottom:14, padding:'8px 12px', background:'var(--panel)', borderRadius:6, border:'1px solid var(--border)' }}>
+        <div style={{ fontSize:10, color:'var(--muted)', marginBottom:6 }}>Resultado mínimo no D20 para...</div>
+        {[
+          { label:'Sucesso Excepcional', need: dc + 5 - Math.floor((attrs?.[form.attrKey]||0)/3), c:'var(--green-l)' },
+          { label:'Sucesso',             need: dc     - Math.floor((attrs?.[form.attrKey]||0)/3), c:'var(--blue-l)' },
+          { label:'Sucesso Parcial',     need: dc - 3 - Math.floor((attrs?.[form.attrKey]||0)/3), c:'var(--gold)' },
+        ].map(r=>(
+          <div key={r.label} style={{ display:'flex', justifyContent:'space-between', fontSize:10, marginBottom:3 }}>
+            <span style={{ color:'var(--muted)' }}>{r.label}</span>
+            <span style={{ fontFamily:'Orbitron,monospace', color: r.need<=1?'var(--green-l)':r.need>20?'var(--red-l)':r.c, fontWeight:700 }}>
+              {r.need<=1?'Sempre':r.need>20?'Impossível':`${r.need}+`}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display:'flex', gap:6 }}>
+        <button className="btn btn-p btn-lg" onClick={handle} style={{ flex:1 }}>🎲 Rolar Agora</button>
+        <button className="btn btn-g" onClick={onClose}>Cancelar</button>
+      </div>
+    </Modal>
   )
 }
 
@@ -540,6 +683,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
   const [showNpcPicker,     setShowNpcPicker]     = useState(false)
   const [showSkillMenu,     setShowSkillMenu]     = useState(false)
   const [showDeclareModal,  setShowDeclareModal]  = useState(false)
+  const [showRollModal,     setShowRollModal]     = useState(false)
+  const [discoveredInfo,    setDiscoveredInfo]    = useState([])  // intel results in this session
   const endRef    = useRef(null)
   const subRefs   = useRef([])
   const char = character
@@ -793,11 +938,39 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
     } else if (actionKey==='defend') {
       desc = `🛡️ D20=${roll} — ${me.character_name} assume postura defensiva.`
     } else if (actionKey==='intel') {
-      const total=roll+(me.attrs?.inteligencia||0)
-      desc = total>=12 ? `🧠 D20=${roll}+INT (${total}) — ${me.character_name} obtém informação valiosa!` : `🧠 D20=${roll}+INT (${total}) — sem resultado.`
+      const total = roll + Math.floor((me.attrs?.inteligencia||0)/3)
+      const dc    = 12
+      const res   = resolveAttributeRoll(me.attrs?.inteligencia||0, roll, dc)
+      // Reveal target's weakness if success
+      let reveal = ''
+      if (res.success && target && target.npc_id) {
+        const npc = npcs.find(n=>n.id===target.npc_id)
+        if (npc?.attrs) {
+          // Find weakest attribute
+          const weakAttr = Object.entries(npc.attrs).sort((a,b)=>a[1]-b[1])[0]
+          reveal = weakAttr ? ` FRAQUEZA REVELADA: ${ATTR_META[weakAttr[0]]?.label} (${weakAttr[1]})` : ''
+        }
+        if (reveal) {
+          setDiscoveredInfo(prev => [...prev, { target: target.character_name, info: reveal, turn: Date.now() }])
+        }
+      }
+      desc = res.success
+        ? `🧠 D20=${roll}+INT=${me.attrs?.inteligencia||0} (${total}) — ${res.label}!${reveal}`
+        : `🧠 D20=${roll}+INT=${me.attrs?.inteligencia||0} (${total}) — ${res.label}. Nenhuma informação obtida.`
     } else if (actionKey==='charisma') {
-      const total=roll+(me.attrs?.carisma||0)
-      desc = total>=12 ? `💬 D20=${roll}+CAR (${total}) — ${me.character_name} convence!` : `💬 D20=${roll}+CAR (${total}) — persuasão falhou.`
+      const total = roll + Math.floor((me.attrs?.carisma||0)/3)
+      const dc    = target?.type==='villain' ? 16 : 10
+      const res   = resolveAttributeRoll(me.attrs?.carisma||0, roll, dc)
+      let effect  = ''
+      if (res.success && target) {
+        effect = res.degree==='great'
+          ? ` ${target.character_name} é completamente convencido!`
+          : ` ${target.character_name} hesita — abre para negociação.`
+        if (res.degree==='partial') effect = ` ${target.character_name} reage com indiferença.`
+      }
+      desc = res.success || res.degree==='partial'
+        ? `💬 D20=${roll}+CAR=${me.attrs?.carisma||0} (${total}) vs DC${dc} — ${res.label}.${effect}`
+        : `💬 D20=${roll}+CAR=${me.attrs?.carisma||0} (${total}) vs DC${dc} — Falha. Nenhum efeito.`
     }
 
     await addCombatAction({
@@ -945,10 +1118,12 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
 
             {!session&&<button className="btn btn-red btn-sm" onClick={()=>setShowCombatSetup(true)}>⚔️ Iniciar</button>}
             {session&&<button className="btn btn-danger btn-sm" onClick={endCombat}>🏁</button>}
-            {session&&isNarrator&&(
+            {session&&(
               <button className="btn btn-sm" style={{ background:'rgba(237,66,69,.15)',color:'var(--red-l)',border:'1px solid rgba(237,66,69,.3)' }}
                 onClick={()=>setShowDeclareModal(true)}>⚠️ Declarar</button>
             )}
+            <button className="btn btn-sm" style={{ background:'rgba(255,179,0,.12)',color:'var(--gold)',border:'1px solid rgba(255,179,0,.3)' }}
+              onClick={()=>setShowRollModal(true)}>🎲 Rolar</button>
             <button className="btn btn-g btn-sm" style={{ color:activeNpc?'var(--gold)':'var(--muted)',borderColor:activeNpc?'rgba(255,179,0,.4)':'var(--border)' }}
               onClick={()=>setShowNpcPicker(true)}>🎭 {activeNpc?activeNpc.name.slice(0,7):'NPC'}</button>
           </div>
@@ -1078,6 +1253,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                 session={session}
                 pendingActions={pendingActions}
                 onRespondPending={respondToPending}
+                discoveredInfo={discoveredInfo}
               />
             </div>
 
@@ -1101,6 +1277,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                       session={session} isMobile
                       pendingActions={pendingActions}
                       onRespondPending={(type,pa)=>{ respondToPending(type,pa); setShowSkillMenu(false) }}
+                      discoveredInfo={discoveredInfo}
                     />
                   </div>
                 </div>
@@ -1180,6 +1357,51 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
           userId={user.id}
           onClose={()=>setShowDeclareModal(false)}
           onDeclared={load}
+        />
+      )}
+
+      {showRollModal&&(
+        <FreeRollModal
+          char={char}
+          attrs={activeNpc
+            ? combatants.find(c=>c.npc_id===activeNpc?.id)?.attrs || activeNpc.attrs || {}
+            : char?.attrs || {}}
+          npcs={npcs}
+          combatants={combatants}
+          missionDifficulty={currentQuest?.difficulty||null}
+          onClose={()=>setShowRollModal(false)}
+          onRolled={async ({desc, result, attrKey, extra})=>{
+            // Post result to chat
+            const {name,color,npcId,alias} = getActorInfo()
+            await sendMessage({
+              location_id: loc.id, user_id: user.id,
+              author_name: name, author_alias: alias,
+              author_color: color, content: desc,
+              mode: attrKey==='inteligencia'?'intel':attrKey==='carisma'?'charisma':'roll',
+              npc_id: npcId,
+            })
+            // Track intel discoveries
+            if (attrKey==='inteligencia' && extra) {
+              setDiscoveredInfo(prev=>[...prev, {
+                actor: name,
+                info: extra,
+                time: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+                success: result.success,
+              }])
+            }
+            // If in combat, also log the action
+            if (session) {
+              const me = getMyCombatant()
+              if (me) {
+                await addCombatAction({
+                  session_id: session.id,
+                  actor_id: me.id, actor_name: me.character_name,
+                  action_type: attrKey==='inteligencia'?'intel':'charisma',
+                  description: desc, value: 0,
+                })
+              }
+            }
+          }}
         />
       )}
 
