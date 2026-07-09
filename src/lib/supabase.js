@@ -106,9 +106,12 @@ export async function getCharacter(userId) {
 }
 
 export async function upsertCharacter(userId, charData) {
+  // Strip XP/level fields — those are ONLY updated by addXpToCharacter
+  // Prevents ficha edits from resetting earned XP and level
+  const { xp_total, level, ...safeData } = charData
   const { data, error } = await supabase
     .from('characters')
-    .upsert({ user_id: userId, ...charData }, { onConflict: 'user_id' })
+    .upsert({ user_id: userId, ...safeData }, { onConflict: 'user_id' })
     .select()
     .single()
   return { data, error }
@@ -168,15 +171,13 @@ export async function deleteItem(itemId) {
 // Missões agora podem ser vistas/geridas pelo dono OU por usuários vinculados (assigned_users)
 
 export async function getQuests(userId) {
-  // Get all quests visible to this user (owner or assigned)
-  // Use two queries + merge to avoid .or() crash when assigned_users column is missing
-  const [{ data: owned }, { data: all }] = await Promise.all([
-    supabase.from('quests').select('*').eq('user_id', userId),
-    supabase.from('quests').select('*').order('created_at', { ascending: false }),
-  ])
-  // Merge: show quests owned by user OR where user is in assigned_users
-  const allQ = all || []
-  const visible = allQ.filter(q =>
+  const { data: all, error } = await supabase
+    .from('quests')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) return { data: [], error }
+  // Filter: show quests owned by user OR where user is in assigned_users
+  const visible = (all || []).filter(q =>
     q.user_id === userId ||
     (Array.isArray(q.assigned_users) && q.assigned_users.includes(userId))
   )
@@ -301,10 +302,13 @@ export async function deleteLocation(locId) {
 // ─── MESSAGES helpers (com NPC e imagem) ─────────────────────
 
 export async function getMessages(locationId, limit = 60) {
-  const { data, error } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('location_id', locationId)
+  let q = supabase.from('messages').select('*')
+  if (locationId == null) {
+    q = q.is('location_id', null)    // global chat
+  } else {
+    q = q.eq('location_id', locationId)
+  }
+  const { data, error } = await q
     .order('created_at', { ascending: false })
     .limit(limit)
   return { data: (data || []).reverse(), error }

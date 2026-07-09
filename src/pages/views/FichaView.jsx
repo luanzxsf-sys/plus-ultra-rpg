@@ -182,7 +182,9 @@ function EditCharModal({ char, onClose, onSaved }) {
   async function handleSave(){
     if(!form.name.trim()){notify('❌ Nome obrigatório','error');return}
     const used=ATTR_KEYS.reduce((s,k)=>s+(attrs[k]||0),0)
-    if(used>60){notify(`❌ Máximo 60 pontos (${used} usados)`,'error');return}
+    const charLevel = char?.level ?? 1
+    const maxPts = 60 + (charLevel - 1) * 3
+    if(used>maxPts){notify(`❌ Máximo ${maxPts} pontos para nível ${charLevel} (${used} usados)`,'error');return}
     setSaving(true)
     let avatar_url=char?.avatar_url||null
     if(avatarFile){const{url,error}=await uploadAvatar(user.id,avatarFile);if(error)notify('⚠️ Erro foto','error');else avatar_url=url}
@@ -196,8 +198,11 @@ function EditCharModal({ char, onClose, onSaved }) {
       stamina:Math.min(char?.stamina||derived.staminaMax,derived.staminaMax),
       quirk_data:char?.quirk_data||{name:'',type:'',subtype:'',level:1,range:'',weakness:'',dominio:0,carga:100,description:'',awakening:'',skills:[]},
       quirk_xp:char?.quirk_xp||0, quirk_level:char?.quirk_level||1,
+      // Preserve XP/level — never overwrite from ficha edit
+      // upsertCharacter will strip these anyway, but keep for reference
       xp:char?.xp||0, xp_max:char?.xp_max||1000,
     }
+    // Never save xp_total or level from ficha edit — those come from addXpToCharacter only
     const{error}=await upsertCharacter(user.id,payload)
     setSaving(false)
     if(error){notify('❌ '+error.message,'error');return}
@@ -289,11 +294,15 @@ export default function FichaView({ onRefreshChar }) {
   async function handleSaved(){ await refreshCharacter(); if(onRefreshChar) onRefreshChar() }
 
   async function handleDelete(){
+    // Reset character sheet but KEEP xp/level (earned progress stays)
     const{error}=await upsertCharacter(user.id,{
       name:'',alias:'',age:'',height:'',affiliation:'',rank:'',specialty:'',bio:'',
-      avatar_url:null,avatar_color:'purple',attrs:{forca:6,agilidade:6,controle:6,resistencia:6,inteligencia:6,carisma:6,stamina:6},
+      avatar_url:null,avatar_color:'purple',
+      attrs:{forca:6,agilidade:6,controle:6,resistencia:6,inteligencia:6,carisma:6,stamina:6},
       quirk_data:{name:'',type:'',subtype:'',level:1,range:'',weakness:'',dominio:0,carga:100,description:'',awakening:'',skills:[]},
-      hp:100,hp_max:100,quirk_charge:100,quirk_max:100,stamina:100,stamina_max:100,xp:0,xp_max:1000,quirk_level:1,quirk_xp:0,
+      hp:100,hp_max:100,quirk_charge:100,quirk_max:100,stamina:100,stamina_max:100,
+      quirk_level:1,quirk_xp:0,
+      // xp, xp_max, xp_total, level are stripped by upsertCharacter — preserved
     })
     if(error){notify('❌ '+error.message,'error');return}
     notify('🗑️ Personagem excluído. Crie um novo.','success')

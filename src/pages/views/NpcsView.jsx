@@ -43,12 +43,13 @@ function NpcModal({ npc, onClose, onSaved }) {
 
   // Quando muda o nível, recalcula pontos disponíveis e reseta attrs
   function handleLevelChange(newLevel) {
-    const lv = Math.max(1,Math.min(100,Number(newLevel)||1))
-    set('level',lv)
-    // Reseta attrs para mínimo ao mudar nível
-    const resetAttrs={forca:ATTR_MIN_NPC,agilidade:ATTR_MIN_NPC,controle:ATTR_MIN_NPC,resistencia:ATTR_MIN_NPC,inteligencia:ATTR_MIN_NPC,carisma:ATTR_MIN_NPC,stamina:ATTR_MIN_NPC}
-    set('attrs',resetAttrs)
-    setForm(f=>({...f,level:lv,attrs:resetAttrs}))
+    const lv = Math.max(1, Math.min(100, Number(newLevel) || 1))
+    // Single atomic update to avoid race condition
+    setForm(f => ({
+      ...f,
+      level: lv,
+      attrs: { forca:1, agilidade:1, controle:1, resistencia:1, inteligencia:1, carisma:1, stamina:1 }
+    }))
   }
 
   const totalPoints = calcNpcPoints(form.level)
