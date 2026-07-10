@@ -605,3 +605,19 @@ ALTER TABLE public.combat_actions
   ADD COLUMN IF NOT EXISTS resolved_by  uuid[] DEFAULT '{}';
 -- resolved_by: quais combatant ids já responderam
 -- pending_for: quais combatant ids ainda precisam responder
+
+-- ── PATCH v3.4: ensure pending action columns exist ──
+ALTER TABLE public.combat_actions
+  ADD COLUMN IF NOT EXISTS is_pending   boolean  DEFAULT false,
+  ADD COLUMN IF NOT EXISTS pending_for  uuid[]   DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS resolved_by  uuid[]   DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS resolved     boolean  DEFAULT false,
+  ADD COLUMN IF NOT EXISTS attr_check   text,
+  ADD COLUMN IF NOT EXISTS difficulty   text     DEFAULT 'medium',
+  ADD COLUMN IF NOT EXISTS dc           int      DEFAULT 12;
+
+-- Set null is_pending to false for existing rows
+UPDATE public.combat_actions SET is_pending = false WHERE is_pending IS NULL;
+UPDATE public.combat_actions SET resolved   = false WHERE resolved   IS NULL;
+UPDATE public.combat_actions SET pending_for = '{}' WHERE pending_for IS NULL;
+UPDATE public.combat_actions SET resolved_by = '{}' WHERE resolved_by IS NULL;

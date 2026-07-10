@@ -38,7 +38,7 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       {/* Pending Actions — shown at top of panel */}
-      {(pendingActions||[]).filter(a=>!a.resolved).map(pa=>(
+      {(pendingActions||[]).filter(a => a.is_pending === true && a.resolved !== true).map(pa=>(
         <PendingActionBanner key={pa.id} action={pa} combatants={combatants}
           myUserId={user?.id} activeNpcId={activeNpc?.id}
           onRespond={onRespondPending||(() => {})}/>
@@ -389,8 +389,10 @@ function PendingActionBanner({ action, combatants, myUserId, activeNpcId, onResp
   const remaining   = targets.filter(id => !resolvedBy.includes(id))
   const allResolved = remaining.length === 0 && targets.length > 0
 
-  // Show to everyone in the combat while it has unresolved targets
-  if (!action.is_pending || (action.resolved && allResolved)) return null
+  // Show to everyone while the action has unresolved targets
+  // Note: is_pending may be stored as true/null (not false) in DB
+  if (!action.is_pending) return null
+  if (action.resolved === true && allResolved) return null
 
   return (
     <div style={{
@@ -546,12 +548,13 @@ function DeclarePendingModal({ session, combatants, skills, missionDifficulty, a
       description: desc,
       value:       0,
       roll_result: 0,
-      is_pending:  true,
-      pending_for: targets,
-      difficulty:  form.difficulty,
-      attr_check:  form.attrCheck||null,
+      is_pending:   true,
+      pending_for:  targets,
+      resolved_by:  [],       // who has already responded
+      difficulty:   form.difficulty,
+      attr_check:   form.attrCheck||null,
       dc,
-      resolved:    false,
+      resolved:     false,
     })
     setSaving(false)
     notify('⚠️ Ação declarada — aguardando resposta dos targets!')
@@ -708,7 +711,9 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
       setCombatants(cbs||[])
       const allActs = acts||[]
       setCombatLog(allActs)
-      setPendingActions(allActs.filter(a=>a.is_pending&&!a.resolved))
+      // is_pending may be null in DB before patch — treat null as false
+      // resolved may be null — treat null as false
+      setPendingActions(allActs.filter(a => a.is_pending === true && a.resolved !== true))
       // Find current quest
       if (sess.quest_id) {
         const q = qs?.find(q=>q.id===sess.quest_id)
@@ -1181,7 +1186,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
           {session&&pendingActions.filter(pa=>{
             const myIds=combatants.filter(c=>c.user_id===user?.id||(activeNpc&&c.npc_id===activeNpc?.id)).map(c=>c.id)
             const resolvedBy=pa.resolved_by||[]
-            return !pa.resolved && (pa.pending_for||[]).some(id=>myIds.includes(id)) && !resolvedBy.some(id=>myIds.includes(id))
+            return pa.is_pending === true && pa.resolved !== true && (pa.pending_for||[]).some(id=>myIds.includes(id)) && !resolvedBy.some(id=>myIds.includes(id))
           }).length>0&&(
             <div style={{ padding:'7px 12px',background:'rgba(237,66,69,.12)',borderBottom:'1px solid rgba(237,66,69,.4)',flexShrink:0,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
               <span style={{ fontSize:11,fontWeight:700,color:'var(--red-l)',flexShrink:0 }}>⚠️ Você está sendo atacado!</span>
