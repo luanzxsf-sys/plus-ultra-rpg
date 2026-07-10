@@ -726,11 +726,12 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
 
   async function load() {
     const [
-      {data:msgs}, {data:sess}, {data:ns}, {data:ps}, {data:qs}
+      {data:msgs}, {data:sess, error:sessErr}, {data:ns}, {data:ps}, {data:qs}
     ] = await Promise.all([
       getMessages(loc.id,80), getActiveCombatSession(loc.id),
       getNpcs(), getAllProfiles(), getQuests(user.id),
     ])
+    if (sessErr) console.error('getActiveCombatSession error:', sessErr)
     setMessages(msgs||[])
     setNpcs(ns||[])
     setAllProfiles(ps||[])
@@ -1030,6 +1031,9 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
 
   // ── Start combat
   async function startCombat(questId) {
+    // Defensive: close any stray active sessions for this location first
+    // (prevents duplicate is_active rows that made getActiveCombatSession fail silently)
+    await supabase.from('combat_sessions').update({ is_active:false }).eq('location_id', loc.id).eq('is_active', true)
     const{data:sess,error}=await createCombatSession(loc.id,questId||null,user.id)
     if(error){notify('❌ '+error.message,'error');return}
     if(char?.name) await addCombatant({
@@ -1049,6 +1053,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
 
   // ── Start mission combat
   async function startMissionCombat(quest) {
+    // Defensive: close any stray active sessions for this location first
+    await supabase.from('combat_sessions').update({ is_active:false }).eq('location_id', loc.id).eq('is_active', true)
     const{data:sess,error}=await createCombatSession(loc.id,quest.id,user.id)
     if(error){notify('❌ '+error.message,'error');return}
     const adds=[]

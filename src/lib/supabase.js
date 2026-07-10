@@ -501,6 +501,8 @@ export async function getActiveCombatSession(locationId) {
     .select('*')
     .eq('location_id', locationId)
     .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
   return { data, error }
 }

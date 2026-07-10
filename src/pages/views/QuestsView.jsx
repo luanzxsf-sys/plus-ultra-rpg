@@ -8,6 +8,7 @@ import { notify } from '../../components/Toast'
 import Modal from '../../components/Modal'
 import Avatar from '../../components/Avatar'
 import { calcMissionXp, MISSION_TYPES, getMissionType } from '../../lib/gameSystem'
+import { ROLE_STYLE } from './NpcsView'
 
 const DIFF_META = {
   'TREINO':  { bg:'rgba(88,101,242,.15)',  c:'var(--blue-l)',   b:'rgba(88,101,242,.25)'  },
@@ -149,7 +150,8 @@ function QuestModal({ quest, onClose, onSaved, userId }) {
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginTop:4 }}>
             {npcs.map(npc => {
               const sel = form.assigned_npcs.includes(npc.id)
-              const rsColor = npc.role==='villain'?'var(--red-l)':npc.role==='hero_npc'?'var(--green-l)':'var(--blue-l)'
+              const rsColor = ROLE_STYLE[npc.role]?.c || 'var(--blue-l)'
+              const rsLabel = ROLE_STYLE[npc.role]?.label || npc.role
               return (
                 <div key={npc.id} onClick={() => toggleNpc(npc.id)}
                   style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 9px', borderRadius:6, border:`1px solid ${sel?'var(--gold)':'var(--border)'}`, background:sel?'rgba(255,179,0,.06)':'transparent', cursor:'pointer', transition:'all .15s' }}>
@@ -158,7 +160,7 @@ function QuestModal({ quest, onClose, onSaved, userId }) {
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11, color:sel?'var(--text-h)':'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{npc.name}</div>
-                    <div style={{ fontSize:9, color:rsColor }}>Nv.{npc.level||1} · {npc.role}</div>
+                    <div style={{ fontSize:9, color:rsColor }}>Nv.{npc.level||1} · {rsLabel}</div>
                   </div>
                   {sel && <span style={{ color:'var(--gold)', fontSize:14, flexShrink:0 }}>✓</span>}
                 </div>

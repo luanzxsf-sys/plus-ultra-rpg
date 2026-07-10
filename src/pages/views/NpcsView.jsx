@@ -13,7 +13,7 @@ const COLORS=[
   {key:'purple',bg:'linear-gradient(135deg,#7c3aed,#5b21b6)'},{key:'gold',bg:'linear-gradient(135deg,#d97706,#b45309)'},
   {key:'pink',bg:'linear-gradient(135deg,#db2777,#be185d)'},{key:'teal',bg:'linear-gradient(135deg,#0891b2,#0e7490)'},
 ]
-const ROLE_STYLE={
+export const ROLE_STYLE={
   npc:     {bg:'rgba(88,101,242,.15)',  c:'var(--blue-l)',   label:'NPC'},
   villain: {bg:'rgba(237,66,69,.15)',   c:'var(--red-l)',    label:'Vilão'},
   hero_npc:{bg:'rgba(59,165,93,.15)',   c:'var(--green-l)',  label:'Herói'},
