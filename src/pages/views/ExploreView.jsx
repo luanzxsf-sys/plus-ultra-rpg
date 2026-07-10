@@ -110,14 +110,31 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
             ))}
           </div>
 
-          {/* Skill submenu */}
+          {/* Skill toggle button */}
           {charSkills.length > 0 && (
+            <button
+              onClick={()=>setShowSkillMenu(!showSkillMenu)}
+              style={{
+                marginTop:5, width:'100%', padding:'7px 6px', borderRadius:6,
+                border:`1px solid ${showSkillMenu?'#9B59B6':'#9B59B644'}`,
+                background: showSkillMenu ? '#9B59B622' : 'transparent',
+                color: showSkillMenu ? '#9B59B6' : '#9B59B699',
+                cursor:'pointer', fontFamily:'Rajdhani,sans-serif', fontWeight:700,
+                fontSize:11, textAlign:'center', transition:'all .15s',
+                display:'flex', alignItems:'center', justifyContent:'center', gap:5,
+              }}>
+              ✨ Técnicas <span style={{ fontSize:8 }}>{showSkillMenu ? '▲' : '▼'}</span>
+            </button>
+          )}
+
+          {/* Skill submenu */}
+          {showSkillMenu && charSkills.length > 0 && (
             <div style={{ marginTop:8 }}>
               <div style={{ fontSize:9, color:'var(--purple-l)', letterSpacing:1, textTransform:'uppercase', marginBottom:5, fontWeight:700 }}>✨ TÉCNICAS</div>
               <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
                 {charSkills.map((sk, i) => (
                   <button key={i}
-                    onClick={()=>{ declareAction('skill', sk) }}
+                    onClick={()=>{ declareAction('skill', sk); setShowSkillMenu(false) }}
                     style={{ padding:'6px 8px', borderRadius:5, border:'1px solid rgba(155,89,182,.4)', background:'rgba(155,89,182,.08)', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', transition:'all .15s' }}
                     onMouseEnter={e=>e.currentTarget.style.background='rgba(155,89,182,.2)'}
                     onMouseLeave={e=>e.currentTarget.style.background='rgba(155,89,182,.08)'}>

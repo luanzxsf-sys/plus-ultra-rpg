@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react'
 import { getAllProfiles, supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import Avatar from '../../components/Avatar'
-import { gradeLabel, gradeColor, calcLevel, ATTR_META, ATTR_KEYS, QUIRK_TYPE_BONUSES } from '../../lib/gameSystem'
+import { gradeLabel, gradeColor, calcLevel, ATTR_META, ATTR_KEYS, QUIRK_TYPE_BONUSES, getSpecialty, calcAttrsWithSpecialty } from '../../lib/gameSystem'
 
 // ── PROFILE DETAIL MODAL ──────────────────────────────────────
 function PlayerDetailModal({ p, onClose, isMe }) {
   const char  = p.characters?.[0]
   const level = char?.level ?? calcLevel(char?.xp_total ?? char?.xp ?? 0)
   const xpPct = (char?.xp_max > 0) ? Math.min(100, Math.round((char.xp / char.xp_max) * 100)) : 0
+  const specObj = getSpecialty(char?.specialty)
+  const effectiveAttrs = char?.attrs ? calcAttrsWithSpecialty(char.attrs, char?.specialty) : {}
 
   return (
     <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -80,15 +82,15 @@ function PlayerDetailModal({ p, onClose, isMe }) {
 
             {/* Info grid */}
             {[
-              { l:'Afiliação',    v:char.affiliation,  c:'var(--blue-l)' },
-              { l:'Especialidade',v:char.specialty,     c:'var(--purple-l)' },
+              { l:'Afiliação',    v:char.affiliation,        c:'var(--blue-l)' },
+              { l:'Especialidade',v:specObj?.label,          c:'var(--purple-l)' },
               { l:'Idade',        v:char.age },
               { l:'Altura',       v:char.height },
             ].filter(r => r.v).length > 0 && (
               <div style={{ marginBottom:12, display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
                 {[
-                  { l:'Afiliação',    v:char.affiliation,  c:'var(--blue-l)' },
-                  { l:'Especialidade',v:char.specialty,     c:'var(--purple-l)' },
+                  { l:'Afiliação',    v:char.affiliation,        c:'var(--blue-l)' },
+                  { l:'Especialidade',v:specObj?.label,          c:'var(--purple-l)' },
                   { l:'Idade',        v:char.age },
                   { l:'Altura',       v:char.height },
                 ].filter(r => r.v).map(r => (
@@ -105,7 +107,7 @@ function PlayerDetailModal({ p, onClose, isMe }) {
               <div style={{ marginBottom:12 }}>
                 <div style={{ fontSize:10, color:'var(--muted)', fontWeight:700, letterSpacing:1, marginBottom:8, textTransform:'uppercase' }}>Atributos</div>
                 {ATTR_KEYS.map(k => {
-                  const v = char.attrs[k] || 0
+                  const v = effectiveAttrs[k] || 0
                   return (
                     <div key={k} style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
                       <span style={{ fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:10, color:'var(--muted)', width:80, textTransform:'uppercase' }}>
@@ -114,6 +116,7 @@ function PlayerDetailModal({ p, onClose, isMe }) {
                       <div style={{ flex:1, height:4, background:'var(--border)', borderRadius:2, overflow:'hidden' }}>
                         <div style={{ height:'100%', width:`${Math.min(100,(v/30)*100)}%`, background:ATTR_META[k].color, borderRadius:2 }} />
                       </div>
+                      <span style={{ fontFamily:'Orbitron,monospace', fontSize:9, color:'var(--text)', width:22, textAlign:'right' }}>{v}</span>
                       <span style={{ fontFamily:'Orbitron,monospace', fontSize:9, color:gradeColor(v), width:26, textAlign:'right' }}>{gradeLabel(v)}</span>
                     </div>
                   )
