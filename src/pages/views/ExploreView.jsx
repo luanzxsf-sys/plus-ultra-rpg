@@ -523,7 +523,7 @@ function PendingActionBanner({ action, combatants, myUserId, activeNpcId, onResp
 // ─────────────────────────────────────────────
 // DECLARE PENDING ACTION MODAL (Narrador/NPC)
 // ─────────────────────────────────────────────
-function DeclarePendingModal({ session, combatants, skills, missionDifficulty, activeNpc, userId, onClose, onDeclared }) {
+function DeclarePendingModal({ session, combatants, skills, missionDifficulty, activeNpc, userId, loc, actorInfo, onClose, onDeclared }) {
   const [form, setForm] = useState({
     actionType:  'attack',
     skillIdx:    '',
@@ -573,6 +573,21 @@ function DeclarePendingModal({ session, combatants, skills, missionDifficulty, a
       dc,
       resolved:     false,
     })
+
+    // Also post the declaration in chat, not just the battle log
+    if (loc?.id && actorInfo) {
+      await sendMessage({
+        location_id:  loc.id,
+        user_id:      userId,
+        author_name:  actorInfo.name,
+        author_alias: actorInfo.alias,
+        author_color: actorInfo.color,
+        content:      `⚠️ ${desc}`,
+        mode:         'system',
+        npc_id:       actorInfo.npcId,
+      })
+    }
+
     setSaving(false)
     notify('⚠️ Ação declarada — aguardando resposta dos targets!')
     onDeclared()
@@ -1377,6 +1392,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
           missionDifficulty={currentQuest?.difficulty||null}
           activeNpc={activeNpc}
           userId={user.id}
+          loc={loc}
+          actorInfo={getActorInfo()}
           onClose={()=>setShowDeclareModal(false)}
           onDeclared={load}
         />

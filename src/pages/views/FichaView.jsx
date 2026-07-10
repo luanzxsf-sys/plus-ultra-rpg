@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { upsertCharacter, uploadAvatar, getPresetTraits, getCharacterTraits, addTraitToCharacter, removeTraitFromCharacter, createCustomTrait } from '../../lib/supabase'
+import { upsertCharacter, resetCharacterFull, uploadAvatar, getPresetTraits, getCharacterTraits, addTraitToCharacter, removeTraitFromCharacter, createCustomTrait } from '../../lib/supabase'
 import { notify } from '../../components/Toast'
 import Modal from '../../components/Modal'
 import Avatar, { avatarBg } from '../../components/Avatar'
@@ -294,15 +294,14 @@ export default function FichaView({ onRefreshChar }) {
   async function handleSaved(){ await refreshCharacter(); if(onRefreshChar) onRefreshChar() }
 
   async function handleDelete(){
-    // Reset character sheet but KEEP xp/level (earned progress stays)
-    const{error}=await upsertCharacter(user.id,{
+    // Full reset — name, attrs AND level/xp all go back to defaults
+    const{error}=await resetCharacterFull(user.id,{
       name:'',alias:'',age:'',height:'',affiliation:'',rank:'',specialty:'',bio:'',
       avatar_url:null,avatar_color:'purple',
       attrs:{forca:6,agilidade:6,controle:6,resistencia:6,inteligencia:6,carisma:6,stamina:6},
       quirk_data:{name:'',type:'',subtype:'',level:1,range:'',weakness:'',dominio:0,carga:100,description:'',awakening:'',skills:[]},
       hp:100,hp_max:100,quirk_charge:100,quirk_max:100,stamina:100,stamina_max:100,
       quirk_level:1,quirk_xp:0,
-      // xp, xp_max, xp_total, level are stripped by upsertCharacter — preserved
     })
     if(error){notify('❌ '+error.message,'error');return}
     notify('🗑️ Personagem excluído. Crie um novo.','success')

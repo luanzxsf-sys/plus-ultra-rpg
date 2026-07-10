@@ -117,6 +117,24 @@ export async function upsertCharacter(userId, charData) {
   return { data, error }
 }
 
+// Full reset used only when deleting a character sheet — unlike upsertCharacter,
+// this explicitly resets xp/xp_total/level back to 1 instead of preserving them
+export async function resetCharacterFull(userId, charData) {
+  const { data, error } = await supabase
+    .from('characters')
+    .upsert({
+      user_id: userId,
+      ...charData,
+      xp: 0,
+      xp_total: 0,
+      xp_max: 1000,
+      level: 1,
+    }, { onConflict: 'user_id' })
+    .select()
+    .single()
+  return { data, error }
+}
+
 // ─── IMAGE upload helpers (generic) ──────────────────────────
 
 export async function uploadAvatar(userId, file) {
