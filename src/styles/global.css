@@ -496,12 +496,32 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
   .settings-grid   { grid-template-columns: 1fr !important; }
   .explore-combat  { width: 200px !important; }
 
+  /* Inline 2/4-column grids used for form fields inside modals (quirk edit,
+     declare action, char sheet fields, etc.) don't carry a CSS class, so they
+     bypass the rules above — force them to stack on narrow screens. Podium
+     (1fr 1.1fr 1fr) is intentionally left as 3 columns. */
+  .modal [style*="grid-template-columns: repeat(4"],
+  .modal [style*="grid-template-columns:repeat(4"],
+  .modal [style*="grid-template-columns: repeat(3"],
+  .modal [style*="grid-template-columns:repeat(3"],
+  .modal [style*="grid-template-columns: 1fr 1fr"],
+  .modal [style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
   /* Chat height mobile */
   .chat-main-col { height: calc(100dvh - 48px) !important; }
 
   .modal { max-height: 95dvh; }
 
   .topbar { position: sticky; top: 0; z-index: 50; }
+}
+
+@media (max-width: 420px) {
+  /* On very narrow phones even 2 columns is tight for labeled inputs — go to 1 */
+  .modal [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 @media (max-width: 480px) {

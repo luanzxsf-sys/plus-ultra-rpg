@@ -1365,11 +1365,11 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
 
           {/* Responding to a pending action — describe it and send in the chat below */}
           {respondMode && (
-            <div style={{ padding:'7px 12px',background:'rgba(237,66,69,.1)',borderBottom:'1px solid rgba(237,66,69,.4)',flexShrink:0,display:'flex',alignItems:'center',gap:8 }}>
-              <span style={{ fontSize:11,fontWeight:700,color:'var(--red-l)' }}>
+            <div style={{ padding:'7px 12px',background:'rgba(237,66,69,.1)',borderBottom:'1px solid rgba(237,66,69,.4)',flexShrink:0,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
+              <span style={{ fontSize:11,fontWeight:700,color:'var(--red-l)',minWidth:0,flex:'1 1 auto' }}>
                 {RESPOND_LABELS[respondMode.type]||`🎲 Rolar ${ATTR_META[respondMode.type]?.label||respondMode.type}`} — descreva e envie no chat
               </span>
-              <button className="btn btn-g btn-sm" style={{ marginLeft:'auto' }} onClick={()=>setRespondMode(null)}>Cancelar ✕</button>
+              <button className="btn btn-g btn-sm" style={{ flexShrink:0 }} onClick={()=>setRespondMode(null)}>Cancelar ✕</button>
             </div>
           )}
 
