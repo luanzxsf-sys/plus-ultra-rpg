@@ -112,6 +112,18 @@ export function calcDerived(attrs, quirk_type, traits = [], specialty = '') {
   }
 }
 
+// ── QUIRK RANGE (automático) ──────────────────
+// Alcance base = 3m + bônus do atributo que o TIPO da quirk favorece
+// (ex: Emissor favorece Força, então mais Força = mais alcance) + bônus
+// do Controle, que sempre soma independente do tipo.
+export function calcQuirkRange(attrs, quirk_type) {
+  const qb = QUIRK_TYPE_BONUSES[quirk_type]
+  const typeAttrValue = qb?.attr ? (attrs?.[qb.attr] || 0) : 0
+  const controle = attrs?.controle || 0
+  const range = 3 + Math.floor(typeAttrValue / 3) + Math.floor(controle / 2)
+  return Math.max(1, range)
+}
+
 // ── SPECIALTIES ───────────────────────────────
 export const SPECIALTIES = [
   { key:'vanguard',   label:'Vanguarda',   icon:'⚔️',  bonuses:{forca:3,resistencia:3,agilidade:1},       passive:'HP < 40%: dano +20%' },

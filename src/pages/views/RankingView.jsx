@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { getRanking, upsertRankEntry, deleteRankEntry, supabase } from '../../lib/supabase'
+import { getRanking, upsertRankEntry, deleteRankEntry, getNpcs, supabase } from '../../lib/supabase'
 import { notify } from '../../components/Toast'
 import Modal from '../../components/Modal'
 import Avatar from '../../components/Avatar'
@@ -48,7 +48,9 @@ function RankModal({ entry, onClose, onSaved, userId }) {
 
 export default function RankingView() {
   const {user} = useAuth()
+  const [tab,setTab]=useState('players') // 'players' | 'heroes'
   const [ranking,setRanking]=useState([])
+  const [heroes,setHeroes]=useState([])
   const [showAdd,setShowAdd]=useState(false)
   const [editEntry,setEditEntry]=useState(null)
   const [liveCount,setLiveCount]=useState(0) // contador de updates em tempo real
@@ -58,8 +60,19 @@ export default function RankingView() {
     if(data) setRanking(data)
   }
 
+  async function loadHeroes(){
+    const{data}=await getNpcs()
+    if(data){
+      const heroNpcs = data
+        .filter(n=>n.role==='hero_npc')
+        .sort((a,b)=>(b.level||1)-(a.level||1) || (a.name||'').localeCompare(b.name||''))
+      setHeroes(heroNpcs)
+    }
+  }
+
   useEffect(()=>{
     load()
+    loadHeroes()
     // Realtime subscription
     const ch=supabase.channel('ranking-rt')
       .on('postgres_changes',{event:'*',schema:'public',table:'ranking'},()=>{
@@ -67,7 +80,13 @@ export default function RankingView() {
         setLiveCount(n=>n+1)
       })
       .subscribe()
-    return ()=>ch.unsubscribe()
+    const chNpc=supabase.channel('ranking-npcs-rt')
+      .on('postgres_changes',{event:'*',schema:'public',table:'npcs'},()=>{
+        loadHeroes()
+        setLiveCount(n=>n+1)
+      })
+      .subscribe()
+    return ()=>{ch.unsubscribe();chNpc.unsubscribe()}
   },[])
 
   const top3 = ranking.slice(0,3)
@@ -75,6 +94,10 @@ export default function RankingView() {
   // Podium order: 2º, 1º, 3º
   const podiumOrder = top3.length>=3 ? [top3[1],top3[0],top3[2]] : top3
   const medals = ['🥈','🥇','🥉']
+
+  const heroesTop3 = heroes.slice(0,3)
+  const heroesRest = heroes.slice(3)
+  const heroesPodiumOrder = heroesTop3.length>=3 ? [heroesTop3[1],heroesTop3[0],heroesTop3[2]] : heroesTop3
 
   return (
     <div style={{flex:1,overflowY:'auto',padding:14}}>
@@ -84,8 +107,22 @@ export default function RankingView() {
           <span className="live"/>Tempo real
           {liveCount>0&&<span style={{color:'var(--dim)'}}>(+{liveCount} atualiz.)</span>}
         </div>
-        <button className="btn btn-p btn-sm" style={{marginLeft:'auto'}} onClick={()=>{setEditEntry(null);setShowAdd(true)}}>+ Adicionar</button>
+        {tab==='players'&&<button className="btn btn-p btn-sm" style={{marginLeft:'auto'}} onClick={()=>{setEditEntry(null);setShowAdd(true)}}>+ Adicionar</button>}
       </div>
+
+      <div style={{display:'flex',gap:6,marginBottom:10,borderBottom:'1px solid var(--border)'}}>
+        <button onClick={()=>setTab('players')}
+          style={{padding:'8px 14px',background:'transparent',border:'none',borderBottom:tab==='players'?'2px solid var(--gold)':'2px solid transparent',color:tab==='players'?'var(--gold)':'var(--muted)',fontFamily:'Rajdhani,sans-serif',fontWeight:700,fontSize:12,letterSpacing:1,textTransform:'uppercase',cursor:'pointer'}}>
+          🏆 Jogadores
+        </button>
+        <button onClick={()=>setTab('heroes')}
+          style={{padding:'8px 14px',background:'transparent',border:'none',borderBottom:tab==='heroes'?'2px solid var(--green-l)':'2px solid transparent',color:tab==='heroes'?'var(--green-l)':'var(--muted)',fontFamily:'Rajdhani,sans-serif',fontWeight:700,fontSize:12,letterSpacing:1,textTransform:'uppercase',cursor:'pointer'}}>
+          🦸 Heróis (NPCs)
+        </button>
+      </div>
+
+      {tab==='players' && (
+      <>
       <div style={{fontSize:11,color:'var(--muted)',marginBottom:14}}>Atualizado automaticamente quando XP é ganho via missões e combate.</div>
 
       {ranking.length===0&&(
@@ -143,8 +180,60 @@ export default function RankingView() {
         </div>
       )}
       {ranking.length>0&&<div style={{fontSize:9,color:'var(--dim)',marginTop:8}}>Clique duplo para editar</div>}
+      </>
+      )}
 
-      {showAdd&&<RankModal entry={editEntry} onClose={()=>{setShowAdd(false);setEditEntry(null)}} onSaved={()=>{load();setShowAdd(false);setEditEntry(null)}} userId={user.id}/>}
+      {tab==='heroes' && (
+      <>
+      <div style={{fontSize:11,color:'var(--muted)',marginBottom:14}}>Automático — puxa todos os NPCs marcados como "Herói" e ordena pelo nível. Edite o NPC na aba de NPCs para mudar a posição.</div>
+
+      {heroes.length===0&&(
+        <div style={{textAlign:'center',padding:32,color:'var(--muted)',fontSize:12}}>
+          <div style={{fontSize:36,marginBottom:8}}>🦸</div>
+          Nenhum NPC marcado como "Herói" ainda.
+        </div>
+      )}
+
+      {heroesTop3.length>0&&(
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1.1fr 1fr',gap:10,marginBottom:14,alignItems:'end'}}>
+          {heroesPodiumOrder.map((h,pi)=>{
+            if(!h) return <div key={pi}/>
+            const isFirst=heroesTop3.indexOf(h)===0
+            return(
+              <div key={h.id}
+                style={{background:'var(--card)',border:`1px solid ${isFirst?'rgba(59,165,93,.4)':'var(--border)'}`,borderRadius:9,padding:isFirst?'18px 12px':'14px 10px',textAlign:'center',transition:'all .2s'}}>
+                <span style={{fontSize:isFirst?32:26,display:'block',marginBottom:7}}>{medals[pi]}</span>
+                <Avatar name={h.name} url={h.avatar_url} color={h.avatar_color||'gray'} size={isFirst?58:44} style={{margin:'0 auto 7px'}}/>
+                <div style={{fontFamily:'Bangers,cursive',fontSize:isFirst?17:14,letterSpacing:1,color:'var(--text-h)'}}>{h.name}</div>
+                {h.alias&&<div style={{fontSize:9,color:'var(--gold)',marginBottom:3}}>"{h.alias}"</div>}
+                {h.quirk_name&&<div style={{fontSize:9,color:'var(--purple-l)',marginBottom:3}}>✨ {h.quirk_name}</div>}
+                <div style={{fontFamily:'Orbitron,monospace',fontSize:isFirst?16:13,fontWeight:700,color:'var(--green-l)'}}>Nv. {h.level||1}</div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {heroesRest.length>0&&(
+        <div style={{display:'flex',flexDirection:'column',gap:5}}>
+          {heroesRest.map((h,i)=>(
+            <div key={h.id}
+              style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:7,padding:'9px 12px',display:'flex',alignItems:'center',gap:10,transition:'all .2s'}}>
+              <div style={{fontFamily:'Orbitron,monospace',fontSize:12,fontWeight:700,color:'var(--dim)',width:24,textAlign:'center'}}>{i+4}</div>
+              <Avatar name={h.name} url={h.avatar_url} color={h.avatar_color||'gray'} size={34}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:'Rajdhani,sans-serif',fontWeight:700,fontSize:13,color:'var(--text-h)'}}>{h.name}</div>
+                <div style={{fontSize:10,color:'var(--muted)'}}>{h.alias?`"${h.alias}"`:''}{h.quirk_name?' · '+h.quirk_name:''}</div>
+              </div>
+              <div style={{fontFamily:'Orbitron,monospace',fontSize:12,fontWeight:700,color:'var(--green-l)'}}>Nv.{h.level||1}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      </>
+      )}
+
+      {tab==='players' && showAdd&&<RankModal entry={editEntry} onClose={()=>{setShowAdd(false);setEditEntry(null)}} onSaved={()=>{load();setShowAdd(false);setEditEntry(null)}} userId={user.id}/>}
     </div>
   )
 }

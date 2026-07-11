@@ -163,7 +163,7 @@ function EditCharModal({ char, onClose, onSaved }) {
   const [form, setForm] = useState({
     name:char?.name||'', alias:char?.alias||'', age:char?.age||'',
     height:char?.height||'', affiliation:char?.affiliation||'',
-    rank:char?.rank||'', specialty:char?.specialty||'', bio:char?.bio||'',
+    specialty:char?.specialty||'', bio:char?.bio||'',
     avatar_color:char?.avatar_color||'purple',
   })
   const [attrs, setAttrs]   = useState(char?.attrs||defaultAttrs)
@@ -236,7 +236,6 @@ function EditCharModal({ char, onClose, onSaved }) {
         <div className="field"><label>Idade</label><input className="input" value={form.age} onChange={e=>set('age',e.target.value)}/></div>
         <div className="field"><label>Altura</label><input className="input" value={form.height} onChange={e=>set('height',e.target.value)}/></div>
         <div className="field"><label>Afiliação</label><input className="input" value={form.affiliation} onChange={e=>set('affiliation',e.target.value)}/></div>
-        <div className="field"><label>Rank Herói</label><input className="input" value={form.rank} onChange={e=>set('rank',e.target.value)} placeholder="Ex: Rank B"/></div>
       </div>
 
       {/* Especialidade */}
@@ -296,7 +295,7 @@ export default function FichaView({ onRefreshChar }) {
   async function handleDelete(){
     // Full reset — name, attrs AND level/xp all go back to defaults
     const{error}=await resetCharacterFull(user.id,{
-      name:'',alias:'',age:'',height:'',affiliation:'',rank:'',specialty:'',bio:'',
+      name:'',alias:'',age:'',height:'',affiliation:'',specialty:'',bio:'',
       avatar_url:null,avatar_color:'purple',
       attrs:{forca:6,agilidade:6,controle:6,resistencia:6,inteligencia:6,carisma:6,stamina:6},
       quirk_data:{name:'',type:'',subtype:'',level:1,range:'',weakness:'',dominio:0,carga:100,description:'',awakening:'',skills:[]},
@@ -345,7 +344,6 @@ export default function FichaView({ onRefreshChar }) {
               <div>
                 <div style={{fontFamily:'Bangers,cursive',fontSize:20,letterSpacing:1,color:'var(--text-h)'}}>{char.name}</div>
                 {char.alias&&<div style={{fontSize:10,color:'var(--gold)',letterSpacing:2}}>"{char.alias}"</div>}
-                {char.rank&&<span className="tag" style={{background:'rgba(237,66,69,.2)',color:'var(--red-l)',border:'1px solid rgba(237,66,69,.3)',marginTop:4}}>{char.rank}</span>}
               </div>
             </div>
             {specObj&&(

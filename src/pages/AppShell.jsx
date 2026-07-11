@@ -155,7 +155,7 @@ export default function AppShell() {
                 <div className="u-rank" style={{ display:'flex', alignItems:'center', gap:5 }}>
                   <span style={{ fontFamily:'Orbitron,monospace', fontSize:9, color:'var(--gold)', fontWeight:700 }}>Nv.{level}</span>
                   <span style={{ color:'var(--dim)' }}>·</span>
-                  <span>{char?.rank||'Configure sua ficha'}</span>
+                  <span>{char?.alias||'Configure sua ficha'}</span>
                 </div>
               </div>
             </div>

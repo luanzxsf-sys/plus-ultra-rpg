@@ -75,7 +75,7 @@ export async function getAllProfiles() {
   // Step 2: get all characters (avoids reverse-FK join issues)
   const { data: chars } = await supabase
     .from('characters')
-    .select('user_id, name, alias, age, height, affiliation, avatar_url, avatar_color, rank, specialty, bio, quirk_data, attrs, hp, hp_max, quirk_charge, quirk_max, stamina, stamina_max, xp, xp_max, xp_total, level, quirk_level')
+    .select('user_id, name, alias, age, height, affiliation, avatar_url, avatar_color, specialty, bio, quirk_data, attrs, hp, hp_max, quirk_charge, quirk_max, stamina, stamina_max, xp, xp_max, xp_total, level, quirk_level')
 
   // Step 3: manually attach characters to profiles
   const charMap = {}
@@ -679,7 +679,7 @@ export async function upsertRankFromCharacter(userId, charData) {
     char_name:   charData.alias || charData.name || '',
     quirk_name:  charData.quirk_data?.name || '',
     points:      charData.xp || 0,
-    rank_badge:  charData.rank || '',
+    rank_badge:  '',
     color:       charData.avatar_color || 'blue',
   }
   if (existing?.id) {

@@ -5,7 +5,7 @@ import { notify } from '../../components/Toast'
 import Modal from '../../components/Modal'
 import {
   QUIRK_TYPES_PTBR, QUIRK_TYPE_BONUSES, quirkRankName,
-  ATTR_META, calcTechDmg, calcTechQuirkCost, techIsAvailable, maxTechTypes, calcDerived,
+  ATTR_META, calcTechDmg, calcTechQuirkCost, techIsAvailable, maxTechTypes, calcDerived, calcQuirkRange,
   QUIRK_LEVEL_THRESHOLDS, calcQuirkLevel, quirkXpForNextLevel
 } from '../../lib/gameSystem'
 
@@ -55,6 +55,7 @@ export default function QuirkView({ onRefreshChar }) {
   const available  = skills.filter(s=>techIsAvailable(s,quirkLevel))
   const locked     = skills.filter(s=>!techIsAvailable(s,quirkLevel))
   const bonus      = QUIRK_TYPE_BONUSES[q.type]
+  const quirkRange = calcQuirkRange(attrs, q.type)
 
   return (
     <div style={{ flex:1,overflowY:'auto',padding:14 }}>
@@ -97,7 +98,7 @@ export default function QuirkView({ onRefreshChar }) {
                   <div style={{ background:'var(--card)',border:'1px solid rgba(34,211,238,.3)',borderRadius:6,padding:'8px 10px',textAlign:'center' }}>
                     <div style={{ fontSize:8,color:'var(--dim)',textTransform:'uppercase',letterSpacing:1,marginBottom:3 }}>Domínio (Controle)</div>
                     <div style={{ fontFamily:'Orbitron,monospace',fontSize:20,fontWeight:700,color:'var(--blue-l)' }}>{attrs.controle || 0}</div>
-                    <div style={{ fontSize:9,color:'var(--dim)',marginTop:2 }}>alcance +{((attrs.controle||0)*0.5).toFixed(1)}m</div>
+                    <div style={{ fontSize:9,color:'var(--dim)',marginTop:2 }}>alcance +{Math.floor((attrs.controle||0)/2)}m</div>
                   </div>
                 </div>
 
@@ -114,7 +115,7 @@ export default function QuirkView({ onRefreshChar }) {
                 <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:10 }}>
                   {[
                     {l:'Fase',     v:currentEvo.label, c:currentEvo.color},
-                    {l:'Alcance',  v:q.range||'Base + '+((attrs.controle||0)*0.5).toFixed(1)+'m', c:'var(--blue-l)'},
+                    {l:'Alcance',  v:quirkRange+'m', c:'var(--blue-l)'},
                     {l:'Fraqueza', v:q.weakness||'—',  c:'var(--red-l)'},
                     {l:'Técnicas', v:`${available.length} ativas`,             c:'var(--muted)'},
                   ].map(s=>(
@@ -260,7 +261,7 @@ function SkillCard({ s, attrs, quirkType, quirkLevel, quirkMax, onClick }) {
 }
 
 function QuirkEditModal({ q, char, onClose, onSave }) {
-  const [form,setForm]=useState({ name:q.name||'',type:q.type||'',subtype:q.subtype||'',range:q.range||'',weakness:q.weakness||'',description:q.description||'',awakening:q.awakening||'' })
+  const [form,setForm]=useState({ name:q.name||'',type:q.type||'',subtype:q.subtype||'',weakness:q.weakness||'',description:q.description||'',awakening:q.awakening||'' })
   const [saving,setSaving]=useState(false)
   function set(k,v){setForm(f=>({...f,[k]:v}))}
   const bonus=QUIRK_TYPE_BONUSES[form.type]
@@ -285,7 +286,6 @@ function QuirkEditModal({ q, char, onClose, onSave }) {
           </select>
         </div>
         <div className="field"><label>Subtipo</label><input className="input" value={form.subtype} onChange={e=>set('subtype',e.target.value)} placeholder="Ex: Manipulação de Sombras"/></div>
-        <div className="field"><label>Alcance base</label><input className="input" value={form.range} onChange={e=>set('range',e.target.value)} placeholder="Ex: 10m"/></div>
         <div className="field"><label>Fraqueza</label><input className="input" value={form.weakness} onChange={e=>set('weakness',e.target.value)}/></div>
       </div>
       {/* Domínio e Carga são exibidos como info, não editáveis */}
@@ -298,7 +298,14 @@ function QuirkEditModal({ q, char, onClose, onSave }) {
         <div style={{ textAlign:'center' }}>
           <div style={{ fontSize:9,color:'var(--dim)',textTransform:'uppercase',letterSpacing:1,marginBottom:3 }}>Domínio (Controle)</div>
           <div style={{ fontFamily:'Orbitron,monospace',fontSize:18,fontWeight:700,color:'var(--blue-l)' }}>{controle}</div>
-          <div style={{ fontSize:9,color:'var(--dim)' }}>Alcance extra: +{(controle*0.5).toFixed(1)}m</div>
+          <div style={{ fontSize:9,color:'var(--dim)' }}>Alcance extra: +{Math.floor(controle/2)}m</div>
+        </div>
+      </div>
+      <div style={{ textAlign:'center',marginBottom:12,padding:'8px 10px',background:'rgba(88,101,242,.06)',border:'1px solid rgba(88,101,242,.2)',borderRadius:7 }}>
+        <div style={{ fontSize:9,color:'var(--dim)',textTransform:'uppercase',letterSpacing:1,marginBottom:3 }}>Alcance Base (automático)</div>
+        <div style={{ fontFamily:'Orbitron,monospace',fontSize:20,fontWeight:700,color:'var(--blue-l)' }}>{calcQuirkRange(attrs,form.type)}m</div>
+        <div style={{ fontSize:9,color:'var(--dim)' }}>
+          3m + {bonus?.attr ? `${ATTR_META[bonus.attr]?.label}(${attrs[bonus.attr]||0})÷3` : 'sem bônus de tipo'} + Controle({controle})÷2
         </div>
       </div>
       <div className="field"><label>Descrição</label><textarea className="input" rows={3} value={form.description} onChange={e=>set('description',e.target.value)}/></div>

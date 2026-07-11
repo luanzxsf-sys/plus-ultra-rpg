@@ -36,11 +36,6 @@ function PlayerDetailModal({ p, onClose, isMe }) {
               <div style={{ fontFamily:'Orbitron,monospace', fontSize:11, fontWeight:700, color:'var(--gold)', background:'rgba(255,179,0,.1)', padding:'2px 8px', borderRadius:3 }}>
                 Nv. {level}
               </div>
-              {char?.rank && (
-                <span style={{ fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:3, background:'rgba(237,66,69,.15)', color:'var(--red-l)', border:'1px solid rgba(237,66,69,.3)' }}>
-                  {char.rank}
-                </span>
-              )}
               <div style={{ fontSize:9, color:p.is_online?'var(--green-l)':'var(--dim)' }}>
                 {p.is_online ? '🟢 Online' : '⚫ Offline'}
               </div>
@@ -194,7 +189,6 @@ function PlayerCard({ p, isMe, onSelect }) {
           </div>
           <div style={{ display:'flex', gap:5, alignItems:'center', marginTop:2 }}>
             <div style={{ fontFamily:'Orbitron,monospace', fontSize:9, color:'var(--gold)', fontWeight:700 }}>Nv.{level}</div>
-            {char?.rank && <span style={{ fontSize:8, color:'var(--red-l)' }}>· {char.rank}</span>}
             <span style={{ fontSize:8, color:p.is_online?'var(--green-l)':'var(--dim)', marginLeft:'auto' }}>
               {p.is_online?'🟢':'⚫'}
             </span>
