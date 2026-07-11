@@ -25,17 +25,33 @@ const ACTION_MSG_CLASS = {
   dodge:'msg-dodge', heal:'msg-heal', intel:'msg-intel',
   charisma:'msg-charisma', system:'msg-system', roll:'msg-roll',
 }
-// Separates the "mechanical" roll/result part of an action message (keeps the
-// action-type color) from the narrative flavor text (rendered in normal text color).
+// Color used only as a small indicator (left border) on the roll mini-card — not full text coloring.
+const ACTION_COLOR = {
+  attack:'var(--red-l)', skill:'var(--purple-l)', defend:'var(--blue-l)',
+  dodge:'var(--teal-l)', take:'var(--red-l)', heal:'var(--green-l)',
+  intel:'var(--gold)', charisma:'var(--pink-l)', roll:'var(--blue-l)',
+}
+const RESPOND_LABELS = { dodge:'💨 Desviar', defend:'🛡️ Defender', take:'💥 Absorver', ack:'✅ Reagir' }
+// Separates the "mechanical" roll/result part of an action message from the
+// narrative flavor text. Narrative comes first (normal text), then a small
+// mini-card with the roll mechanics at the end, colored only as an indicator.
 const MECH_SEP = ' ‖ '
-function ActionMessageText({ content }) {
+function ActionMessageText({ content, color }) {
   if (!content?.includes(MECH_SEP)) return content
   const [mech, ...rest] = content.split(MECH_SEP)
   const narrative = rest.join(MECH_SEP)
   return (
     <>
-      <span style={{ fontFamily:'Orbitron,monospace', fontSize:11, fontWeight:700 }}>{mech}</span>
-      {narrative && <div style={{ color:'var(--text)', fontWeight:400, fontStyle:'normal', marginTop:3 }}>{narrative}</div>}
+      {narrative && <div style={{ color:'var(--text)', fontSize:13, lineHeight:1.5, marginBottom:6 }}>{narrative}</div>}
+      <div style={{
+        display:'inline-flex', alignItems:'center', gap:6,
+        padding:'4px 9px', borderRadius:5, background:'rgba(255,255,255,.03)',
+        border:'1px solid var(--border)', borderLeft:`3px solid ${color||'var(--muted)'}`,
+      }}>
+        <span style={{ fontFamily:'Orbitron,monospace', fontSize:10, fontWeight:700, color:'var(--muted)', letterSpacing:.2 }}>
+          {mech}
+        </span>
+      </div>
     </>
   )
 }
@@ -47,7 +63,7 @@ function ActionMessageText({ content }) {
 function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
   actionMode, setActionMode, charSkills, showSkillMenu, setShowSkillMenu,
   declareAction, setShowCombatSetup, user, activeNpc, hpColor, getActionType, session, isMobile,
-  pendingActions, onRespondPending, discoveredInfo }) {
+  pendingActions, respondMode, onArmRespond, discoveredInfo }) {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
@@ -55,7 +71,7 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
       {(pendingActions||[]).filter(a => a.is_pending === true && a.resolved !== true).map(pa=>(
         <PendingActionBanner key={pa.id} action={pa} combatants={combatants}
           myUserId={user?.id} activeNpcId={activeNpc?.id}
-          onRespond={onRespondPending||(() => {})}/>
+          respondMode={respondMode} onArmRespond={onArmRespond||(() => {})}/>
       ))}
 
       {/* Combatants list */}
@@ -407,9 +423,7 @@ function LocationsGrid({ locations, onSelect, onAdd, onEdit, onDelete }) {
 // ─────────────────────────────────────────────
 // PENDING ACTION BANNER
 // ─────────────────────────────────────────────
-function PendingActionBanner({ action, combatants, myUserId, activeNpcId, onRespond }) {
-  const [composing, setComposing] = useState(null) // response type being composed, or null
-  const [narrative, setNarrative] = useState('')
+function PendingActionBanner({ action, combatants, myUserId, activeNpcId, respondMode, onArmRespond }) {
   const actor      = combatants.find(c => c.id === action.actor_id)
   const targets    = action.pending_for || []
   const resolvedBy = action.resolved_by || []
@@ -421,6 +435,8 @@ function PendingActionBanner({ action, combatants, myUserId, activeNpcId, onResp
   const atMeta      = ATTR_META[action.attr_check]
   const remaining   = targets.filter(id => !resolvedBy.includes(id))
   const allResolved = remaining.length === 0 && targets.length > 0
+  const isAttackType = ['attack','skill'].includes(action.action_type)
+  const isArmed       = respondMode?.action?.id === action.id
 
   // Show to everyone while the action has unresolved targets
   // Note: is_pending may be stored as true/null (not false) in DB
@@ -488,54 +504,45 @@ function PendingActionBanner({ action, combatants, myUserId, activeNpcId, onResp
         })}
       </div>
 
-      {/* My response buttons */}
-      {iAmTarget && !iResponded && !composing && (
+      {/* My response buttons — only shows dodge/defend/absorb for actual attacks;
+          otherwise (perception, charisma, other events) shows just the relevant roll or a plain acknowledge */}
+      {iAmTarget && !iResponded && (
         <div>
           <div style={{ fontSize:10, color:'var(--text-h)', fontWeight:700, marginBottom:6 }}>
-            🎯 Você foi alvo! Escolha sua resposta:
+            {isArmed ? '✍️ Descreva sua reação e envie no chat abaixo' : '🎯 Você foi alvo! Escolha sua resposta:'}
           </div>
-          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-            <button className="btn" style={{ padding:'8px 12px', background:'rgba(34,211,238,.15)', color:'var(--teal-l)', border:'1px solid rgba(34,211,238,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
-              onClick={()=>setComposing('dodge')}>
-              💨 Desviar<br/><span style={{fontSize:9,fontWeight:400}}>Roll Agilidade</span>
-            </button>
-            <button className="btn" style={{ padding:'8px 12px', background:'rgba(88,101,242,.15)', color:'var(--blue-l)', border:'1px solid rgba(88,101,242,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
-              onClick={()=>setComposing('defend')}>
-              🛡️ Defender<br/><span style={{fontSize:9,fontWeight:400}}>Roll Resistência</span>
-            </button>
-            {action.attr_check && !['agilidade','resistencia'].includes(action.attr_check) && (
-              <button className="btn" style={{ padding:'8px 12px', background:'rgba(155,89,182,.15)', color:'var(--purple-l)', border:'1px solid rgba(155,89,182,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
-                onClick={()=>setComposing(action.attr_check)}>
-                🎲 Rolar {atMeta?.label}<br/><span style={{fontSize:9,fontWeight:400}}>DC {action.dc||12}</span>
-              </button>
-            )}
-            <button className="btn" style={{ padding:'8px 12px', background:'rgba(237,66,69,.12)', color:'var(--red-l)', border:'1px solid rgba(237,66,69,.35)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
-              onClick={()=>setComposing('take')}>
-              💥 Absorver<br/><span style={{fontSize:9,fontWeight:400}}>Dano completo</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Compose narrative before confirming reaction */}
-      {iAmTarget && !iResponded && composing && (
-        <div>
-          <div style={{ fontSize:10, color:'var(--text-h)', fontWeight:700, marginBottom:6 }}>
-            {{dodge:'💨 Desviando',defend:'🛡️ Defendendo',take:'💥 Absorvendo o golpe'}[composing] || `🎲 Rolando ${atMeta?.label}`} — descreva o que aconteceu (opcional):
-          </div>
-          <textarea
-            autoFocus rows={2} value={narrative}
-            onChange={e=>setNarrative(e.target.value)}
-            placeholder="Ex: Roy salta pra trás, esquivando por pouco..."
-            style={{ width:'100%', resize:'vertical', background:'var(--panel)', border:'1px solid var(--border)', borderRadius:6, color:'var(--text)', fontSize:12, padding:'7px 9px', marginBottom:8, fontFamily:'inherit' }}
-          />
-          <div style={{ display:'flex', gap:6 }}>
-            <button className="btn btn-red btn-sm" style={{ flex:1 }}
-              onClick={()=>{ onRespond(composing, action, narrative); setComposing(null); setNarrative('') }}>
-              ✔️ Confirmar
-            </button>
-            <button className="btn btn-g btn-sm" onClick={()=>{ setComposing(null); setNarrative('') }}>Cancelar</button>
-          </div>
+          {!isArmed && (
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              {isAttackType && (
+                <>
+                  <button className="btn" style={{ padding:'8px 12px', background:'rgba(34,211,238,.15)', color:'var(--teal-l)', border:'1px solid rgba(34,211,238,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+                    onClick={()=>onArmRespond('dodge', action)}>
+                    💨 Desviar<br/><span style={{fontSize:9,fontWeight:400}}>Roll Agilidade</span>
+                  </button>
+                  <button className="btn" style={{ padding:'8px 12px', background:'rgba(88,101,242,.15)', color:'var(--blue-l)', border:'1px solid rgba(88,101,242,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+                    onClick={()=>onArmRespond('defend', action)}>
+                    🛡️ Defender<br/><span style={{fontSize:9,fontWeight:400}}>Roll Resistência</span>
+                  </button>
+                  <button className="btn" style={{ padding:'8px 12px', background:'rgba(237,66,69,.12)', color:'var(--red-l)', border:'1px solid rgba(237,66,69,.35)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+                    onClick={()=>onArmRespond('take', action)}>
+                    💥 Absorver<br/><span style={{fontSize:9,fontWeight:400}}>Dano completo</span>
+                  </button>
+                </>
+              )}
+              {action.attr_check && (!isAttackType || !['agilidade','resistencia'].includes(action.attr_check)) && (
+                <button className="btn" style={{ padding:'8px 12px', background:'rgba(155,89,182,.15)', color:'var(--purple-l)', border:'1px solid rgba(155,89,182,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+                  onClick={()=>onArmRespond(action.attr_check, action)}>
+                  🎲 Rolar {atMeta?.label}<br/><span style={{fontSize:9,fontWeight:400}}>DC {action.dc||12}</span>
+                </button>
+              )}
+              {!isAttackType && !action.attr_check && (
+                <button className="btn" style={{ padding:'8px 12px', background:'rgba(155,89,182,.15)', color:'var(--purple-l)', border:'1px solid rgba(155,89,182,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+                  onClick={()=>onArmRespond('ack', action)}>
+                  ✅ Reagir<br/><span style={{fontSize:9,fontWeight:400}}>Sem roll</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -743,6 +750,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
   const [messages,     setMessages]     = useState([])
   const [text,         setText]         = useState('')
   const [actionMode,   setActionMode]   = useState(null)
+  const [respondMode,  setRespondMode]  = useState(null) // {type, action} — reacting to a pending action, typed in the main chat box
   const [session,      setSession]      = useState(null)
   const [combatants,   setCombatants]   = useState([])
   const [combatLog,    setCombatLog]    = useState([])
@@ -861,6 +869,24 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
   async function respondToPending(responseType, pendingAction, customNarrative='') {
     const me = getMyCombatant()
     if (!me) { notify('Você não está no combate','error'); return }
+
+    if (responseType === 'ack') {
+      // Narrative-only acknowledgment — no roll, no damage
+      const desc = `💬 Reação${MECH_SEP}${customNarrative.trim()||`${me.character_name} reage.`}`
+      const currentResolvedBy = pendingAction.resolved_by || []
+      const newResolvedBy = [...new Set([...currentResolvedBy, me.id])]
+      const allTargets = pendingAction.pending_for || []
+      const allResponded = allTargets.every(id => newResolvedBy.includes(id))
+      await supabase.from('combat_actions').update({ resolved_by:newResolvedBy, resolved:allResponded }).eq('id', pendingAction.id)
+      await addCombatAction({
+        session_id:session.id, actor_id:me.id, actor_name:me.character_name,
+        target_id:pendingAction.actor_id, action_type:'ack', description:desc, value:0,
+      })
+      const { name, color, npcId, alias, avatar } = getActorInfo()
+      await sendMessage({ location_id:loc.id, user_id:user.id, author_name:name, author_alias:alias, author_color:color, content:desc, mode:'system', npc_id:npcId, author_avatar_url:avatar })
+      load()
+      return
+    }
 
     const roll     = rollD(20)
     const attrKey  = responseType==='dodge' ? 'agilidade' : responseType==='defend' ? 'resistencia' : responseType
@@ -1283,6 +1309,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             {messages.map((msg,i)=>{
               const cls=ACTION_MSG_CLASS[msg.mode]||''
               const isNpc=!!msg.npc_id
+              const isActionMsg = msg.content?.includes(MECH_SEP)
+              const actionColor = ACTION_COLOR[msg.mode] || ATTR_META[msg.mode]?.color
               return(
                 <div key={msg.id||i} className="msg">
                   <div style={{ width:34,height:34,borderRadius:'50%',background:avatarBg(msg.author_color||'purple'),display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Bangers,cursive',fontSize:13,color:'#fff',flexShrink:0,overflow:'hidden',border:isNpc?'2px solid var(--gold)':'none',marginTop:1 }}>
@@ -1297,7 +1325,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                       {isNpc&&<span className="tag" style={{ background:'rgba(255,179,0,.15)',color:'var(--gold)',border:'1px solid rgba(255,179,0,.3)',fontSize:7 }}>NPC</span>}
                       <span className="msg-time">{new Date(msg.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
                     </div>
-                    <div className={`msg-text ${cls}`}><ActionMessageText content={msg.content} /></div>
+                    <div className={isActionMsg ? 'msg-text' : `msg-text ${cls}`}><ActionMessageText content={msg.content} color={actionColor} /></div>
                     {msg.image_url&&<img src={msg.image_url} alt="" className="msg-img"/>}
                   </div>
                 </div>
@@ -1335,6 +1363,16 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             </div>
           )}
 
+          {/* Responding to a pending action — describe it and send in the chat below */}
+          {respondMode && (
+            <div style={{ padding:'7px 12px',background:'rgba(237,66,69,.1)',borderBottom:'1px solid rgba(237,66,69,.4)',flexShrink:0,display:'flex',alignItems:'center',gap:8 }}>
+              <span style={{ fontSize:11,fontWeight:700,color:'var(--red-l)' }}>
+                {RESPOND_LABELS[respondMode.type]||`🎲 Rolar ${ATTR_META[respondMode.type]?.label||respondMode.type}`} — descreva e envie no chat
+              </span>
+              <button className="btn btn-g btn-sm" style={{ marginLeft:'auto' }} onClick={()=>setRespondMode(null)}>Cancelar ✕</button>
+            </div>
+          )}
+
           {/* ── INPUT — sem tabs de ação ── */}
           <div className="chat-input-body" style={{ borderTop:'1px solid var(--border)',padding:'8px 10px' }}>
             {session && (
@@ -1347,16 +1385,29 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             )}
             <textarea className="chat-textarea" rows={1} value={text}
               onChange={e=>setText(e.target.value)}
-              onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();actionMode==='attack'?declareAttack():actionMode?declareAction(actionMode):handleSend()} }}
-              placeholder={actionMode
-                ? `${getActionType(actionMode)?.label} — descreva e envie...`
-                : activeNpc?`Como ${activeNpc.name}...`:`Chat em ${loc.name}...`}
-              style={{ border: actionMode ? `1px solid ${getActionType(actionMode)?.color||'var(--border)'}` : undefined }}
+              onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey){
+                e.preventDefault()
+                if(respondMode){ respondToPending(respondMode.type,respondMode.action,text); setRespondMode(null); setText('') }
+                else if(actionMode==='attack'){ declareAttack() }
+                else if(actionMode){ declareAction(actionMode) }
+                else { handleSend() }
+              } }}
+              placeholder={respondMode
+                ? `${RESPOND_LABELS[respondMode.type]||'🎲 Reagir'} — descreva e envie...`
+                : actionMode
+                  ? `${getActionType(actionMode)?.label} — descreva e envie...`
+                  : activeNpc?`Como ${activeNpc.name}...`:`Chat em ${loc.name}...`}
+              style={{ border: respondMode ? '1px solid var(--red)' : actionMode ? `1px solid ${getActionType(actionMode)?.color||'var(--border)'}` : undefined }}
             />
             <button className="chat-send"
-              onClick={()=>actionMode==='attack'?declareAttack():actionMode?declareAction(actionMode):handleSend()}
-              disabled={!text.trim()&&!actionMode}
-              style={{ background: actionMode ? getActionType(actionMode)?.color : undefined }}>↑</button>
+              onClick={()=>{
+                if(respondMode){ respondToPending(respondMode.type,respondMode.action,text); setRespondMode(null); setText('') }
+                else if(actionMode==='attack'){ declareAttack() }
+                else if(actionMode){ declareAction(actionMode) }
+                else { handleSend() }
+              }}
+              disabled={!text.trim()&&!actionMode&&!respondMode}
+              style={{ background: respondMode ? 'var(--red)' : actionMode ? getActionType(actionMode)?.color : undefined }}>↑</button>
           </div>
         </div>
 
@@ -1374,7 +1425,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                 user={user} activeNpc={activeNpc} hpColor={hpColor} getActionType={getActionType}
                 session={session}
                 pendingActions={pendingActions}
-                onRespondPending={respondToPending}
+                respondMode={respondMode}
+                onArmRespond={(type,pa)=>setRespondMode({type,action:pa})}
                 discoveredInfo={discoveredInfo}
               />
             </div>
@@ -1398,7 +1450,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                       user={user} activeNpc={activeNpc} hpColor={hpColor} getActionType={getActionType}
                       session={session} isMobile
                       pendingActions={pendingActions}
-                      onRespondPending={(type,pa)=>{ respondToPending(type,pa); setShowSkillMenu(false) }}
+                      respondMode={respondMode}
+                      onArmRespond={(type,pa)=>{ setRespondMode({type,action:pa}); setShowSkillMenu(false) }}
                       discoveredInfo={discoveredInfo}
                     />
                   </div>
