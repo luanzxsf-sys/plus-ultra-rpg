@@ -52,6 +52,7 @@ export default function ChatView({ onViewChange }) {
     const name  = activeNpc ? activeNpc.name        : (char?.name  || profile?.username || 'Herói')
     const alias = activeNpc ? (activeNpc.alias || '') : (char?.alias || '')
     const color = activeNpc ? (activeNpc.avatar_color || 'gray') : (char?.avatar_color || 'purple')
+    const avatar = activeNpc ? (activeNpc.avatar_url || null) : (char?.avatar_url || null)
     await sendMessage({
       location_id:  null,
       user_id:      user.id,
@@ -61,6 +62,7 @@ export default function ChatView({ onViewChange }) {
       content:      text.trim(),
       mode:         'chat',
       npc_id:       activeNpc?.id || null,
+      author_avatar_url: avatar,
     })
     setText('')
   }
@@ -94,7 +96,9 @@ export default function ChatView({ onViewChange }) {
             return (
               <div key={msg.id || i} className="msg">
                 <div style={{ width:36, height:36, borderRadius:'50%', background:avatarBg(msg.author_color||'purple'), display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Bangers,cursive', fontSize:14, color:'#fff', flexShrink:0, overflow:'hidden', border: isNpc?'2px solid var(--gold)':'none', marginTop:1 }}>
-                  {msg.author_name?.[0]?.toUpperCase()||'?'}
+                  {msg.author_avatar_url
+                    ? <img src={msg.author_avatar_url} alt="" style={{ width:'100%',height:'100%',objectFit:'cover' }}/>
+                    : msg.author_name?.[0]?.toUpperCase()||'?'}
                 </div>
                 <div className="msg-body">
                   <div className="msg-head">

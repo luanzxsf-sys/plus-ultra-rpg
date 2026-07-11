@@ -25,6 +25,20 @@ const ACTION_MSG_CLASS = {
   dodge:'msg-dodge', heal:'msg-heal', intel:'msg-intel',
   charisma:'msg-charisma', system:'msg-system', roll:'msg-roll',
 }
+// Separates the "mechanical" roll/result part of an action message (keeps the
+// action-type color) from the narrative flavor text (rendered in normal text color).
+const MECH_SEP = ' ‖ '
+function ActionMessageText({ content }) {
+  if (!content?.includes(MECH_SEP)) return content
+  const [mech, ...rest] = content.split(MECH_SEP)
+  const narrative = rest.join(MECH_SEP)
+  return (
+    <>
+      <span style={{ fontFamily:'Orbitron,monospace', fontSize:11, fontWeight:700 }}>{mech}</span>
+      {narrative && <div style={{ color:'var(--text)', fontWeight:400, fontStyle:'normal', marginTop:3 }}>{narrative}</div>}
+    </>
+  )
+}
 
 
 // ─────────────────────────────────────────────
@@ -95,7 +109,7 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
             ⚡ AÇÕES {targetId && <span style={{ color:'var(--red-l)' }}>→ {combatants.find(c=>c.id===targetId)?.character_name}</span>}
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:5 }}>
-            {ACTION_TYPES.map(at => (
+            {ACTION_TYPES.filter(at=>at.key!=='skill').map(at => (
               <button key={at.key}
                 onClick={()=>{ setActionMode(actionMode===at.key?null:at.key) }}
                 style={{
@@ -134,7 +148,7 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
               <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
                 {charSkills.map((sk, i) => (
                   <button key={i}
-                    onClick={()=>{ declareAction('skill', sk); setShowSkillMenu(false) }}
+                    onClick={()=>{ declareAttack(sk); setShowSkillMenu(false) }}
                     style={{ padding:'6px 8px', borderRadius:5, border:'1px solid rgba(155,89,182,.4)', background:'rgba(155,89,182,.08)', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', transition:'all .15s' }}
                     onMouseEnter={e=>e.currentTarget.style.background='rgba(155,89,182,.2)'}
                     onMouseLeave={e=>e.currentTarget.style.background='rgba(155,89,182,.08)'}>
@@ -394,6 +408,8 @@ function LocationsGrid({ locations, onSelect, onAdd, onEdit, onDelete }) {
 // PENDING ACTION BANNER
 // ─────────────────────────────────────────────
 function PendingActionBanner({ action, combatants, myUserId, activeNpcId, onRespond }) {
+  const [composing, setComposing] = useState(null) // response type being composed, or null
+  const [narrative, setNarrative] = useState('')
   const actor      = combatants.find(c => c.id === action.actor_id)
   const targets    = action.pending_for || []
   const resolvedBy = action.resolved_by || []
@@ -473,30 +489,52 @@ function PendingActionBanner({ action, combatants, myUserId, activeNpcId, onResp
       </div>
 
       {/* My response buttons */}
-      {iAmTarget && !iResponded && (
+      {iAmTarget && !iResponded && !composing && (
         <div>
           <div style={{ fontSize:10, color:'var(--text-h)', fontWeight:700, marginBottom:6 }}>
             🎯 Você foi alvo! Escolha sua resposta:
           </div>
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             <button className="btn" style={{ padding:'8px 12px', background:'rgba(34,211,238,.15)', color:'var(--teal-l)', border:'1px solid rgba(34,211,238,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
-              onClick={()=>onRespond('dodge', action)}>
+              onClick={()=>setComposing('dodge')}>
               💨 Desviar<br/><span style={{fontSize:9,fontWeight:400}}>Roll Agilidade</span>
             </button>
             <button className="btn" style={{ padding:'8px 12px', background:'rgba(88,101,242,.15)', color:'var(--blue-l)', border:'1px solid rgba(88,101,242,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
-              onClick={()=>onRespond('defend', action)}>
+              onClick={()=>setComposing('defend')}>
               🛡️ Defender<br/><span style={{fontSize:9,fontWeight:400}}>Roll Resistência</span>
             </button>
             {action.attr_check && !['agilidade','resistencia'].includes(action.attr_check) && (
               <button className="btn" style={{ padding:'8px 12px', background:'rgba(155,89,182,.15)', color:'var(--purple-l)', border:'1px solid rgba(155,89,182,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
-                onClick={()=>onRespond(action.attr_check, action)}>
+                onClick={()=>setComposing(action.attr_check)}>
                 🎲 Rolar {atMeta?.label}<br/><span style={{fontSize:9,fontWeight:400}}>DC {action.dc||12}</span>
               </button>
             )}
             <button className="btn" style={{ padding:'8px 12px', background:'rgba(237,66,69,.12)', color:'var(--red-l)', border:'1px solid rgba(237,66,69,.35)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
-              onClick={()=>onRespond('take', action)}>
+              onClick={()=>setComposing('take')}>
               💥 Absorver<br/><span style={{fontSize:9,fontWeight:400}}>Dano completo</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Compose narrative before confirming reaction */}
+      {iAmTarget && !iResponded && composing && (
+        <div>
+          <div style={{ fontSize:10, color:'var(--text-h)', fontWeight:700, marginBottom:6 }}>
+            {{dodge:'💨 Desviando',defend:'🛡️ Defendendo',take:'💥 Absorvendo o golpe'}[composing] || `🎲 Rolando ${atMeta?.label}`} — descreva o que aconteceu (opcional):
+          </div>
+          <textarea
+            autoFocus rows={2} value={narrative}
+            onChange={e=>setNarrative(e.target.value)}
+            placeholder="Ex: Roy salta pra trás, esquivando por pouco..."
+            style={{ width:'100%', resize:'vertical', background:'var(--panel)', border:'1px solid var(--border)', borderRadius:6, color:'var(--text)', fontSize:12, padding:'7px 9px', marginBottom:8, fontFamily:'inherit' }}
+          />
+          <div style={{ display:'flex', gap:6 }}>
+            <button className="btn btn-red btn-sm" style={{ flex:1 }}
+              onClick={()=>{ onRespond(composing, action, narrative); setComposing(null); setNarrative('') }}>
+              ✔️ Confirmar
+            </button>
+            <button className="btn btn-g btn-sm" onClick={()=>{ setComposing(null); setNarrative('') }}>Cancelar</button>
           </div>
         </div>
       )}
@@ -585,6 +623,7 @@ function DeclarePendingModal({ session, combatants, skills, missionDifficulty, a
         content:      `⚠️ ${desc}`,
         mode:         'system',
         npc_id:       actorInfo.npcId,
+        author_avatar_url: actorInfo.avatar,
       })
     }
 
@@ -794,29 +833,32 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
       color: activeNpc.avatar_color || 'gray',
       npcId: activeNpc.id,
       alias: activeNpc.alias || '',
+      avatar: activeNpc.avatar_url || null,
     }
     return {
       name:  char?.name || profile?.username || 'Herói',
       color: char?.avatar_color || 'purple',
       npcId: null,
       alias: char?.alias || '',
+      avatar: char?.avatar_url || null,
     }
   }
 
   // ── Send plain chat message
   async function handleSend() {
     if (!text.trim()||!user) return
-    const {name,color,npcId,alias} = getActorInfo()
+    const {name,color,npcId,alias,avatar} = getActorInfo()
     await sendMessage({
       location_id:loc.id, user_id:user.id,
       author_name:name, author_alias:alias,
       author_color:color, content:text.trim(), mode:'rp', npc_id:npcId,
+      author_avatar_url:avatar,
     })
     setText('')
   }
 
   // ── Resolve a pending action (individual per target)
-  async function respondToPending(responseType, pendingAction) {
+  async function respondToPending(responseType, pendingAction, customNarrative='') {
     const me = getMyCombatant()
     if (!me) { notify('Você não está no combate','error'); return }
 
@@ -828,27 +870,29 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
     const actor    = combatants.find(c => c.id === pendingAction.actor_id)
     const rollDisp = roll + Math.floor(attrV / 3)
 
-    let desc = '', dmgTaken = 0
+    let mech = '', auto = '', dmgTaken = 0
+    const techBonus = ['attack','skill'].includes(pendingAction.action_type) ? (pendingAction.value||0) : 0
 
     if (responseType === 'take') {
       // Absorb full damage — no roll
       const atk   = actor?.attrs?.forca || 0
-      const skill = pendingAction.skill_name ? charSkills.find(s=>s.name===pendingAction.skill_name) : null
-      dmgTaken = rollD(8) + atk + (skill ? (skill.level||1)*3 : 0)
+      dmgTaken = rollD(8) + atk + techBonus
       await applyCombatEffect(me.id, -dmgTaken)
-      desc = `💥 ${me.character_name} absorve o golpe diretamente — ${dmgTaken} de dano!`
+      mech = `💥 Absorve o golpe`
+      auto = `${dmgTaken} de dano recebido!`
 
     } else if (responseType === 'dodge') {
+      mech = `💨 D20=${roll}+AGI=${attrV}=${rollDisp} vs DC${dc} — ${result.label}`
       if (result.success) {
-        desc = `💨 D20=${roll}+AGI=${attrV}=${rollDisp} vs DC${dc} — ${me.character_name} DESVIA! (${result.label})`
+        auto = `${me.character_name} desvia com sucesso!`
         // No damage on success
       } else {
         const atk = actor?.attrs?.forca || 0
         dmgTaken  = result.degree === 'partial'
-          ? Math.max(1, Math.floor((rollD(8) + atk) * 0.5))  // partial = half damage
-          : rollD(8) + atk                                    // fail = full damage
+          ? Math.max(1, Math.floor((rollD(8) + atk + techBonus) * 0.5))  // partial = half damage
+          : rollD(8) + atk + techBonus                                   // fail = full damage
         await applyCombatEffect(me.id, -dmgTaken)
-        desc = `💨 D20=${roll}+AGI=${attrV}=${rollDisp} vs DC${dc} — ${result.label}. ${dmgTaken} de dano recebido!`
+        auto = `${dmgTaken} de dano recebido!`
       }
 
     } else if (responseType === 'defend') {
@@ -856,25 +900,29 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
       const reduction = result.success
         ? Math.floor((me.attrs?.resistencia || 0) * (result.degree==='great' ? 0.75 : 0.5))
         : 0
-      dmgTaken = Math.max(0, rollD(8) + atk - reduction)
+      dmgTaken = Math.max(0, rollD(8) + atk + techBonus - reduction)
       await applyCombatEffect(me.id, -dmgTaken)
-      desc = result.success
-        ? `🛡️ D20=${roll}+RES=${attrV}=${rollDisp} vs DC${dc} — Defesa! −${reduction} reduzido. ${dmgTaken} de dano. (${result.label})`
-        : `🛡️ D20=${roll}+RES=${attrV}=${rollDisp} vs DC${dc} — Defesa falhou! ${dmgTaken} de dano. (${result.label})`
+      mech = `🛡️ D20=${roll}+RES=${attrV}=${rollDisp} vs DC${dc} — ${result.label}`
+      auto = result.success
+        ? `Defesa! −${reduction} reduzido. ${dmgTaken} de dano.`
+        : `Defesa falhou! ${dmgTaken} de dano.`
 
     } else {
       // Generic attribute roll (intel, carisma, controle, etc.)
       const atLabel = ATTR_META[attrKey]?.label || attrKey
-      desc = `🎲 D20=${roll}+${atLabel}=${attrV}=${rollDisp} vs DC${dc} — ${me.character_name}: ${result.label}`
+      mech = `🎲 D20=${roll}+${atLabel}=${attrV}=${rollDisp} vs DC${dc} — ${result.label}`
+      auto = `${me.character_name}: ${result.label}`
       if (!result.success && result.degree !== 'partial') {
         // Failure on attribute check = applies base damage if it was an attack
         if (['attack','skill'].includes(pendingAction.action_type)) {
           dmgTaken = rollD(6) + (actor?.attrs?.forca || 0)
           await applyCombatEffect(me.id, -dmgTaken)
-          desc += ` — ${dmgTaken} de dano!`
+          auto = `${dmgTaken} de dano!`
         }
       }
     }
+
+    const desc = `${mech}${MECH_SEP}${customNarrative.trim()||auto}`
 
     // Track who responded using resolved_by array
     const currentResolvedBy = pendingAction.resolved_by || []
@@ -904,7 +952,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
     })
 
     // Post in chat with action color
-    const { name, color, npcId, alias } = getActorInfo()
+    const { name, color, npcId, alias, avatar } = getActorInfo()
     await sendMessage({
       location_id:  loc.id,
       user_id:      user.id,
@@ -914,6 +962,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
       content:      desc,
       mode:         responseType,
       npc_id:       npcId,
+      author_avatar_url: avatar,
     })
 
     if (allResponded) {
@@ -931,50 +980,101 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
   }
 
   // ── Declare free action
+  // Direct combat: Atacar/Técnica. Turn-based — the attacker's roll becomes
+  // the DC the target must beat when reacting (dodge/defend/absorb) via the
+  // existing pending-action system. Damage is only applied when they respond.
+  async function declareAttack(skill=null) {
+    if (!session) return
+    const me = getMyCombatant()
+    if (!me) { notify('Você não está no combate','error'); return }
+    if (!targetId) { notify('Selecione um alvo','error'); return }
+    const target = combatants.find(c=>c.id===targetId)
+    if (!target) { notify('Selecione um alvo','error'); return }
+    const at    = getActionType('attack')
+    const roll  = rollD(20)
+    const isCrit = roll===20
+    const isMiss = roll===1
+    const customNarrative = text.trim()
+    const attrV = me.attrs?.[at.attr]||0
+
+    if (isMiss) {
+      // Fumble: nothing to react to, resolve immediately as a miss
+      const desc = `💨 FALHA! D20=${roll}${MECH_SEP}${customNarrative||`${me.character_name} erra o golpe${skill?` com ${skill.name}`:''}.`}`
+      await addCombatAction({
+        session_id:session.id, actor_id:me.id, actor_name:me.character_name,
+        target_id:target.id, target_name:target.character_name,
+        action_type: skill?'skill':'attack', skill_name:skill?.name||null,
+        roll_result:roll, value:0, description:desc, resolved:true,
+      })
+      const {name,color,npcId,avatar} = getActorInfo()
+      await sendMessage({ location_id:loc.id, user_id:user.id, author_name:name, author_color:color, author_alias:'', content:desc, mode:skill?'skill':'attack', npc_id:npcId, author_avatar_url:avatar })
+      setText(''); setTargetId(null); setActionMode(null); setShowSkillMenu(false); load()
+      return
+    }
+
+    const dc = Math.max(5, roll + Math.floor(attrV/3) + (isCrit?5:0))
+    const techDmg = skill ? calcTechDmg(skill,me.attrs,me.quirk_data?.type||'',1) : 0
+    const bonusDmg = isCrit ? techDmg*2 : techDmg
+    const mech = isCrit ? `💥 CRÍTICO! D20=${roll}+${ATTR_META[at.attr]?.label}=${attrV} (DC${dc})`
+      : `${at.label.split(' ')[0]} D20=${roll}+${ATTR_META[at.attr]?.label}=${attrV} (DC${dc})`
+    const auto = `${me.character_name} ataca ${target.character_name}${skill?` com ${skill.name}`:''}! Aguardando reação...`
+    const desc = `${mech}${MECH_SEP}${customNarrative||auto}`
+
+    await addCombatAction({
+      session_id:session.id,
+      actor_id:me.id, actor_name:me.character_name,
+      target_id:target.id, target_name:target.character_name,
+      action_type: skill?'skill':'attack', skill_name:skill?.name||null,
+      roll_result:roll, value:bonusDmg, description:desc,
+      is_pending:true, pending_for:[target.id], resolved_by:[],
+      attr_check:'agilidade', dc, resolved:false,
+    })
+
+    if (skill) {
+      await updateCombatant(me.id,{quirk_charge:Math.max(0,me.quirk_charge-calcTechQuirkCost(skill,me.quirk_max))})
+      if (!activeNpc && user?.id) {
+        const qxp = calcTechQuirkXp(skill.level || 1)
+        const result = await addQuirkXp(user.id, qxp)
+        if (result.leveledUp) {
+          notify(`✨ Quirk evoluiu para ${['','Iniciante','Intermediário','Avançado','Mestre','Despertado'][result.newLevel]}!`, 'success')
+        }
+      }
+    }
+
+    const {name,color,npcId,avatar} = getActorInfo()
+    await sendMessage({
+      location_id:loc.id, user_id:user.id,
+      author_name:name, author_color:color, author_alias:'',
+      content:desc, mode:skill?'skill':'attack', npc_id:npcId,
+      author_avatar_url:avatar,
+    })
+
+    setText(''); setTargetId(null); setActionMode(null); setShowSkillMenu(false); load()
+  }
+
   async function declareAction(actionKey, skill=null) {
     if (!session) return
     const me = getMyCombatant()
     if (!me) { notify('Você não está no combate','error'); return }
-    if (!targetId&&['attack','skill','heal'].includes(actionKey)) { notify('Selecione um alvo','error'); return }
+    if (!targetId&&['heal'].includes(actionKey)) { notify('Selecione um alvo','error'); return }
     const target  = targetId ? combatants.find(c=>c.id===targetId) : me
-    const at      = getActionType(actionKey)
     const roll    = rollD(20)
-    const isCrit  = roll===20
-    const isMiss  = roll===1
-    let value=0, desc=''
+    const customNarrative = text.trim()
+    let value=0, mech='', auto=''
 
-    if (actionKey==='attack'||actionKey==='skill') {
-      if (!isMiss) {
-        const attrV = me.attrs?.[at.attr]||0
-        const techDmg = skill ? calcTechDmg(skill,me.attrs,me.quirk_data?.type||'',1) : 0
-        value = isCrit
-          ? (rollD(6)+attrV+techDmg)*2
-          : rollD(6)+attrV+techDmg
-        await applyCombatEffect(target.id,-value)
-        if (skill) {
-          await updateCombatant(me.id,{quirk_charge:Math.max(0,me.quirk_charge-calcTechQuirkCost(skill,me.quirk_max))})
-          // Award quirk XP for technique usage (only for player combatants, not NPC-controlled)
-          if (!activeNpc && user?.id) {
-            const qxp = calcTechQuirkXp(skill.level || 1)
-            const result = await addQuirkXp(user.id, qxp)
-            if (result.leveledUp) {
-              notify(`✨ Quirk evoluiu para ${['','Iniciante','Intermediário','Avançado','Mestre','Despertado'][result.newLevel]}!`, 'success')
-            }
-          }
-        }
-      }
-      desc = isMiss ? `💨 FALHA! D20=${roll} — ${me.character_name} erra.`
-        : isCrit ? `💥 CRÍTICO! D20=${roll} — ${value} dano em ${target.character_name}!${skill?` [${skill.name}]`:''}`
-        : `${at.label.split(' ')[0]} D20=${roll} — ${value} dano em ${target.character_name}${skill?` [${skill.name}]`:''}.`
-    } else if (actionKey==='heal') {
+    if (actionKey==='heal') {
       value = rollD(6)+(me.attrs?.carisma||0)
       await applyCombatEffect(target.id,value)
-      desc = `💚 D6+CAR — ${me.character_name} cura ${target.character_name} por ${value} HP!`
+      mech = `💚 D6+CAR=${value}`
+      auto = `${me.character_name} cura ${target.character_name} por ${value} HP!`
     } else if (actionKey==='dodge') {
       const total=roll+(me.attrs?.agilidade||0)
-      desc = total>=10 ? `💨 D20=${roll}+AGI — ${me.character_name} está em esquiva! (${total})` : `💨 D20=${roll} — esquiva falhou. (${total})`
+      const success = total>=10
+      mech = `💨 D20=${roll}+AGI (${total})`
+      auto = success ? `${me.character_name} está em esquiva!` : `Esquiva falhou.`
     } else if (actionKey==='defend') {
-      desc = `🛡️ D20=${roll} — ${me.character_name} assume postura defensiva.`
+      mech = `🛡️ D20=${roll}`
+      auto = `${me.character_name} assume postura defensiva.`
     } else if (actionKey==='intel') {
       const total = roll + Math.floor((me.attrs?.inteligencia||0)/3)
       const dc    = 12
@@ -986,15 +1086,14 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
         if (npc?.attrs) {
           // Find weakest attribute
           const weakAttr = Object.entries(npc.attrs).sort((a,b)=>a[1]-b[1])[0]
-          reveal = weakAttr ? ` FRAQUEZA REVELADA: ${ATTR_META[weakAttr[0]]?.label} (${weakAttr[1]})` : ''
+          reveal = weakAttr ? `FRAQUEZA REVELADA: ${ATTR_META[weakAttr[0]]?.label} (${weakAttr[1]})` : ''
         }
         if (reveal) {
           setDiscoveredInfo(prev => [...prev, { target: target.character_name, info: reveal, turn: Date.now() }])
         }
       }
-      desc = res.success
-        ? `🧠 D20=${roll}+INT=${me.attrs?.inteligencia||0} (${total}) — ${res.label}!${reveal}`
-        : `🧠 D20=${roll}+INT=${me.attrs?.inteligencia||0} (${total}) — ${res.label}. Nenhuma informação obtida.`
+      mech = `🧠 D20=${roll}+INT=${me.attrs?.inteligencia||0} (${total}) — ${res.label}`
+      auto = res.success ? (reveal || 'Informação obtida.') : 'Nenhuma informação obtida.'
     } else if (actionKey==='charisma') {
       const total = roll + Math.floor((me.attrs?.carisma||0)/3)
       const dc    = target?.type==='villain' ? 16 : 10
@@ -1002,14 +1101,15 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
       let effect  = ''
       if (res.success && target) {
         effect = res.degree==='great'
-          ? ` ${target.character_name} é completamente convencido!`
-          : ` ${target.character_name} hesita — abre para negociação.`
-        if (res.degree==='partial') effect = ` ${target.character_name} reage com indiferença.`
+          ? `${target.character_name} é completamente convencido!`
+          : `${target.character_name} hesita — abre para negociação.`
+        if (res.degree==='partial') effect = `${target.character_name} reage com indiferença.`
       }
-      desc = res.success || res.degree==='partial'
-        ? `💬 D20=${roll}+CAR=${me.attrs?.carisma||0} (${total}) vs DC${dc} — ${res.label}.${effect}`
-        : `💬 D20=${roll}+CAR=${me.attrs?.carisma||0} (${total}) vs DC${dc} — Falha. Nenhum efeito.`
+      mech = `💬 D20=${roll}+CAR=${me.attrs?.carisma||0} (${total}) vs DC${dc} — ${res.label}`
+      auto = (res.success || res.degree==='partial') ? effect : 'Nenhum efeito.'
     }
+
+    const desc = `${mech}${MECH_SEP}${customNarrative||auto}`
 
     await addCombatAction({
       session_id:session.id,
@@ -1019,14 +1119,15 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
       roll_result:roll, value, description:desc,
     })
 
-    const {name,color,npcId} = getActorInfo()
+    const {name,color,npcId,avatar} = getActorInfo()
     await sendMessage({
       location_id:loc.id, user_id:user.id,
       author_name:name, author_color:color, author_alias:'',
       content:desc, mode:actionKey, npc_id:npcId,
+      author_avatar_url:avatar,
     })
 
-    setTargetId(null); setActionMode(null); setShowSkillMenu(false); load()
+    setText(''); setTargetId(null); setActionMode(null); setShowSkillMenu(false); load()
   }
 
   // ── Start combat
@@ -1185,7 +1286,9 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
               return(
                 <div key={msg.id||i} className="msg">
                   <div style={{ width:34,height:34,borderRadius:'50%',background:avatarBg(msg.author_color||'purple'),display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Bangers,cursive',fontSize:13,color:'#fff',flexShrink:0,overflow:'hidden',border:isNpc?'2px solid var(--gold)':'none',marginTop:1 }}>
-                    {msg.author_name?.[0]?.toUpperCase()||'?'}
+                    {msg.author_avatar_url
+                      ? <img src={msg.author_avatar_url} alt="" style={{ width:'100%',height:'100%',objectFit:'cover' }}/>
+                      : msg.author_name?.[0]?.toUpperCase()||'?'}
                   </div>
                   <div className="msg-body">
                     <div className="msg-head">
@@ -1194,7 +1297,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                       {isNpc&&<span className="tag" style={{ background:'rgba(255,179,0,.15)',color:'var(--gold)',border:'1px solid rgba(255,179,0,.3)',fontSize:7 }}>NPC</span>}
                       <span className="msg-time">{new Date(msg.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
                     </div>
-                    <div className={`msg-text ${cls}`}>{msg.content}</div>
+                    <div className={`msg-text ${cls}`}><ActionMessageText content={msg.content} /></div>
                     {msg.image_url&&<img src={msg.image_url} alt="" className="msg-img"/>}
                   </div>
                 </div>
@@ -1228,31 +1331,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
           }).length>0&&(
             <div style={{ padding:'7px 12px',background:'rgba(237,66,69,.12)',borderBottom:'1px solid rgba(237,66,69,.4)',flexShrink:0,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
               <span style={{ fontSize:11,fontWeight:700,color:'var(--red-l)',flexShrink:0 }}>⚠️ Você está sendo atacado!</span>
-              <button className="btn btn-sm" style={{ background:'rgba(34,211,238,.2)',color:'var(--teal-l)',border:'1px solid rgba(34,211,238,.4)' }}
-                onClick={()=>{
-                  const pa=pendingActions.find(a=>{
-                    const myIds=combatants.filter(c=>c.user_id===user?.id||(activeNpc&&c.npc_id===activeNpc?.id)).map(c=>c.id)
-                    return !a.resolved&&(a.pending_for||[]).some(id=>myIds.includes(id))&&!(a.resolved_by||[]).some(id=>myIds.includes(id))
-                  })
-                  if(pa) respondToPending('dodge',pa)
-                }}>💨 Desviar</button>
-              <button className="btn btn-sm" style={{ background:'rgba(88,101,242,.2)',color:'var(--blue-l)',border:'1px solid rgba(88,101,242,.4)' }}
-                onClick={()=>{
-                  const pa=pendingActions.find(a=>{
-                    const myIds=combatants.filter(c=>c.user_id===user?.id||(activeNpc&&c.npc_id===activeNpc?.id)).map(c=>c.id)
-                    return !a.resolved&&(a.pending_for||[]).some(id=>myIds.includes(id))&&!(a.resolved_by||[]).some(id=>myIds.includes(id))
-                  })
-                  if(pa) respondToPending('defend',pa)
-                }}>🛡️ Defender</button>
-              <button className="btn btn-sm" style={{ background:'rgba(237,66,69,.15)',color:'var(--red-l)',border:'1px solid rgba(237,66,69,.4)' }}
-                onClick={()=>{
-                  const pa=pendingActions.find(a=>{
-                    const myIds=combatants.filter(c=>c.user_id===user?.id||(activeNpc&&c.npc_id===activeNpc?.id)).map(c=>c.id)
-                    return !a.resolved&&(a.pending_for||[]).some(id=>myIds.includes(id))&&!(a.resolved_by||[]).some(id=>myIds.includes(id))
-                  })
-                  if(pa) respondToPending('take',pa)
-                }}>💥 Absorver</button>
-              <button className="btn btn-g btn-sm" style={{ marginLeft:'auto' }} onClick={()=>setShowSkillMenu(true)}>Ver painel ⚔️</button>
+              <button className="btn btn-g btn-sm" style={{ marginLeft:'auto' }} onClick={()=>setShowSkillMenu(true)}>Responder ⚔️</button>
             </div>
           )}
 
@@ -1268,14 +1347,14 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             )}
             <textarea className="chat-textarea" rows={1} value={text}
               onChange={e=>setText(e.target.value)}
-              onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();actionMode?declareAction(actionMode):handleSend()} }}
+              onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();actionMode==='attack'?declareAttack():actionMode?declareAction(actionMode):handleSend()} }}
               placeholder={actionMode
                 ? `${getActionType(actionMode)?.label} — descreva e envie...`
                 : activeNpc?`Como ${activeNpc.name}...`:`Chat em ${loc.name}...`}
               style={{ border: actionMode ? `1px solid ${getActionType(actionMode)?.color||'var(--border)'}` : undefined }}
             />
             <button className="chat-send"
-              onClick={()=>actionMode?declareAction(actionMode):handleSend()}
+              onClick={()=>actionMode==='attack'?declareAttack():actionMode?declareAction(actionMode):handleSend()}
               disabled={!text.trim()&&!actionMode}
               style={{ background: actionMode ? getActionType(actionMode)?.color : undefined }}>↑</button>
           </div>
@@ -1417,13 +1496,14 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
           onClose={()=>setShowRollModal(false)}
           onRolled={async ({desc, result, attrKey, extra})=>{
             // Post result to chat
-            const {name,color,npcId,alias} = getActorInfo()
+            const {name,color,npcId,alias,avatar} = getActorInfo()
             await sendMessage({
               location_id: loc.id, user_id: user.id,
               author_name: name, author_alias: alias,
               author_color: color, content: desc,
               mode: attrKey==='inteligencia'?'intel':attrKey==='carisma'?'charisma':'roll',
               npc_id: npcId,
+              author_avatar_url: avatar,
             })
             // Track intel discoveries
             if (attrKey==='inteligencia' && extra) {
