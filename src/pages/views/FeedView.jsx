@@ -7,7 +7,7 @@ import Avatar from '../../components/Avatar'
 
 const NEWS_COLORS = {
   URGENTE:  { bg:'rgba(220,38,38,.2)',  c:'var(--red-l)' },
-  EVENTO:   { bg:'rgba(255,179,0,.2)',  c:'var(--gold)' },
+  EVENTO:   { bg:'rgba(242,183,5,.2)',  c:'var(--gold)' },
   UPDATE:   { bg:'rgba(37,99,235,.2)',  c:'var(--blue-l)' },
   CONQUISTA:{ bg:'rgba(22,163,74,.2)',  c:'var(--green-l)' },
   ESPECIAL: { bg:'rgba(124,58,237,.2)', c:'var(--purple-l)' },
@@ -117,7 +117,7 @@ export default function FeedView() {
             <div className="card-title">🌟 Eventos <button className="btn btn-g btn-sm" onClick={()=>setShowEvent(true)}>+ Add</button></div>
             {events.length===0 && <div style={{ fontSize:10, color:'var(--dim)' }}>Sem eventos.</div>}
             {events.map(ev=>(
-              <div key={ev.id} style={{ background:'var(--panel)', border:'1px solid rgba(255,179,0,.25)', borderRadius:5, padding:8, marginBottom:6 }}>
+              <div key={ev.id} style={{ background:'var(--panel)', border:'1px solid rgba(242,183,5,.25)', borderRadius:5, padding:8, marginBottom:6 }}>
                 <div style={{ display:'flex', justifyContent:'space-between' }}>
                   <div style={{ fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:12, color:'var(--gold)' }}>{ev.name}</div>
                   <button onClick={async()=>{await deleteEvent(ev.id);load()}} style={{ background:'transparent', border:'none', color:'var(--dim)', cursor:'pointer' }}>✕</button>

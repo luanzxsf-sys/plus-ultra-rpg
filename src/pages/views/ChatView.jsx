@@ -103,9 +103,9 @@ export default function ChatView({ onViewChange }) {
                 <div className="msg-body">
                   <div className="msg-head">
                     <span className="msg-name" style={{ color: TEXT_COLOR[msg.author_color]||'var(--text-h)' }}>{msg.author_name}</span>
-                    {msg.author_alias && <span className="tag" style={{ background:'rgba(155,89,182,.15)', color:'var(--purple-l)', border:'1px solid rgba(155,89,182,.3)', fontSize:7 }}>{msg.author_alias}</span>}
-                    {isNpc && <span className="tag" style={{ background:'rgba(255,179,0,.15)', color:'var(--gold)', border:'1px solid rgba(255,179,0,.3)', fontSize:7 }}>NPC</span>}
-                    {isMe  && <span className="tag" style={{ background:'rgba(88,101,242,.15)', color:'var(--blue-l)', border:'1px solid rgba(88,101,242,.3)', fontSize:7 }}>VOCÊ</span>}
+                    {msg.author_alias && <span className="tag" style={{ background:'rgba(139,92,246,.15)', color:'var(--purple-l)', border:'1px solid rgba(139,92,246,.3)', fontSize:7 }}>{msg.author_alias}</span>}
+                    {isNpc && <span className="tag" style={{ background:'rgba(242,183,5,.15)', color:'var(--gold)', border:'1px solid rgba(242,183,5,.3)', fontSize:7 }}>NPC</span>}
+                    {isMe  && <span className="tag" style={{ background:'rgba(59,111,240,.15)', color:'var(--blue-l)', border:'1px solid rgba(59,111,240,.3)', fontSize:7 }}>VOCÊ</span>}
                     <span className="msg-time">{new Date(msg.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
                   </div>
                   <div className="msg-text">{msg.content}</div>
@@ -127,7 +127,7 @@ export default function ChatView({ onViewChange }) {
             </div>
           )}
           <div className="chat-input-body">
-            <button className="btn btn-g btn-sm" style={{ flexShrink:0, color:activeNpc?'var(--gold)':'var(--dim)', borderColor:activeNpc?'rgba(255,179,0,.4)':'var(--border)' }} onClick={()=>setShowNpcPicker(true)} title="Falar como NPC">🎭</button>
+            <button className="btn btn-g btn-sm" style={{ flexShrink:0, color:activeNpc?'var(--gold)':'var(--dim)', borderColor:activeNpc?'rgba(242,183,5,.4)':'var(--border)' }} onClick={()=>setShowNpcPicker(true)} title="Falar como NPC">🎭</button>
             <textarea
               className="chat-textarea"
               rows={1}
@@ -169,13 +169,13 @@ export default function ChatView({ onViewChange }) {
           <div className="modal" style={{ maxWidth:380 }}>
             <div className="modal-hdr"><div className="modal-title">🎭 Vestir NPC</div><button className="modal-close" onClick={()=>setShowNpcPicker(false)}>✕</button></div>
             <div style={{ marginBottom:12, fontSize:11, color:'var(--muted)' }}>Suas mensagens serão enviadas como o NPC selecionado.</div>
-            <div className="player-row" onClick={()=>{setActiveNpc(null);setShowNpcPicker(false)}} style={{ padding:'8px 10px', borderRadius:6, border:`1px solid ${!activeNpc?'var(--blue)':'var(--border)'}`, marginBottom:6, background:!activeNpc?'rgba(88,101,242,.08)':'transparent' }}>
+            <div className="player-row" onClick={()=>{setActiveNpc(null);setShowNpcPicker(false)}} style={{ padding:'8px 10px', borderRadius:6, border:`1px solid ${!activeNpc?'var(--blue)':'var(--border)'}`, marginBottom:6, background:!activeNpc?'rgba(59,111,240,.08)':'transparent' }}>
               <Avatar name={char?.name||profile?.username} color={char?.avatar_color||'purple'} url={char?.avatar_url} size={28}/>
               <div className="p-info"><div className="p-name">Você mesmo — {char?.name||profile?.username}</div></div>
               {!activeNpc && <span style={{ color:'var(--blue-l)', fontSize:14 }}>✓</span>}
             </div>
             {npcs.map(npc=>(
-              <div key={npc.id} className="player-row" onClick={()=>{setActiveNpc(npc);setShowNpcPicker(false)}} style={{ padding:'8px 10px', borderRadius:6, border:`1px solid ${activeNpc?.id===npc.id?'var(--gold)':'var(--border)'}`, marginBottom:6, background:activeNpc?.id===npc.id?'rgba(255,179,0,.06)':'transparent', cursor:'pointer' }}>
+              <div key={npc.id} className="player-row" onClick={()=>{setActiveNpc(npc);setShowNpcPicker(false)}} style={{ padding:'8px 10px', borderRadius:6, border:`1px solid ${activeNpc?.id===npc.id?'var(--gold)':'var(--border)'}`, marginBottom:6, background:activeNpc?.id===npc.id?'rgba(242,183,5,.06)':'transparent', cursor:'pointer' }}>
               <Avatar name={npc.name} color={npc.avatar_color||'gray'} url={npc.avatar_url} size={28}/>
               <div className="p-info"><div className="p-name">{npc.name}</div><div className="p-char">{npc.role} · {npc.quirk_name||'—'}</div></div>
               {activeNpc?.id===npc.id && <span style={{ color:'var(--gold)', fontSize:14 }}>✓</span>}

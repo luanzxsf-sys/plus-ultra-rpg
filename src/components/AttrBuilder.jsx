@@ -85,7 +85,7 @@ export default function AttrBuilder({
 
       {/* Bonus summary */}
       {(specObj || bonuses.length > 0) && (
-        <div style={{ marginBottom:10, padding:'7px 10px', background:'rgba(88,101,242,.08)', borderRadius:6, border:'1px solid rgba(88,101,242,.2)' }}>
+        <div style={{ marginBottom:10, padding:'7px 10px', background:'rgba(59,111,240,.08)', borderRadius:6, border:'1px solid rgba(59,111,240,.2)' }}>
           {specObj && (
             <div style={{ fontSize:10, color:'var(--blue-l)', fontWeight:700, marginBottom: bonuses.filter(b=>b.sourceType!=='specialty').length>0?4:0 }}>
               {specObj.icon} {specObj.label}: {Object.entries(specObj.bonuses).map(([k,v]) => `+${v} ${ATTR_META[k]?.label}`).join(' · ')}

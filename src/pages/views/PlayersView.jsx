@@ -33,7 +33,7 @@ function PlayerDetailModal({ p, onClose, isMe }) {
               @{p.username} {isMe && <span style={{ color:'var(--purple-l)' }}>· (você)</span>}
             </div>
             <div style={{ display:'flex', gap:6, alignItems:'center', marginTop:4, flexWrap:'wrap' }}>
-              <div style={{ fontFamily:'Orbitron,monospace', fontSize:11, fontWeight:700, color:'var(--gold)', background:'rgba(255,179,0,.1)', padding:'2px 8px', borderRadius:3 }}>
+              <div style={{ fontFamily:'Orbitron,monospace', fontSize:11, fontWeight:700, color:'var(--gold)', background:'rgba(242,183,5,.1)', padding:'2px 8px', borderRadius:3 }}>
                 Nv. {level}
               </div>
               <div style={{ fontSize:9, color:p.is_online?'var(--green-l)':'var(--dim)' }}>
@@ -121,7 +121,7 @@ function PlayerDetailModal({ p, onClose, isMe }) {
 
             {/* Quirk */}
             {char.quirk_data?.name && (
-              <div style={{ background:'var(--panel)', border:'1px solid rgba(155,89,182,.4)', borderRadius:7, padding:10, marginBottom:10 }}>
+              <div style={{ background:'var(--panel)', border:'1px solid rgba(139,92,246,.4)', borderRadius:7, padding:10, marginBottom:10 }}>
                 <div style={{ fontFamily:'Bangers,cursive', fontSize:16, letterSpacing:1, color:'var(--purple-l)', marginBottom:2 }}>
                   {char.quirk_data.name}
                 </div>
@@ -164,9 +164,9 @@ function PlayerCard({ p, isMe, onSelect }) {
 
   return (
     <div onClick={onSelect}
-      style={{ background:'var(--card)', border:`1px solid ${isMe?'rgba(155,89,182,.4)':'var(--border)'}`, borderRadius:9, padding:13, cursor:'pointer', transition:'all .2s' }}
+      style={{ background:'var(--card)', border:`1px solid ${isMe?'rgba(139,92,246,.4)':'var(--border)'}`, borderRadius:9, padding:13, cursor:'pointer', transition:'all .2s' }}
       onMouseEnter={e => e.currentTarget.style.borderColor='var(--glow)'}
-      onMouseLeave={e => e.currentTarget.style.borderColor = isMe?'rgba(155,89,182,.4)':'var(--border)'}>
+      onMouseLeave={e => e.currentTarget.style.borderColor = isMe?'rgba(139,92,246,.4)':'var(--border)'}>
 
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:9 }}>
@@ -302,7 +302,7 @@ export default function PlayersView() {
 
       {/* Error */}
       {!loading && error && (
-        <div style={{ background:'rgba(237,66,69,.1)', border:'1px solid rgba(237,66,69,.3)', borderRadius:8, padding:16, marginBottom:14 }}>
+        <div style={{ background:'rgba(229,72,77,.1)', border:'1px solid rgba(229,72,77,.3)', borderRadius:8, padding:16, marginBottom:14 }}>
           <div style={{ color:'var(--red-l)', fontWeight:700, marginBottom:6 }}>❌ Erro ao carregar</div>
           <div style={{ color:'var(--muted)', fontSize:11 }}>{error}</div>
           <button className="btn btn-p btn-sm" style={{ marginTop:8 }} onClick={load}>Tentar novamente</button>

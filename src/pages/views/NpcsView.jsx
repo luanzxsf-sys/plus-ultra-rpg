@@ -14,10 +14,10 @@ const COLORS=[
   {key:'pink',bg:'linear-gradient(135deg,#db2777,#be185d)'},{key:'teal',bg:'linear-gradient(135deg,#0891b2,#0e7490)'},
 ]
 export const ROLE_STYLE={
-  npc:     {bg:'rgba(88,101,242,.15)',  c:'var(--blue-l)',   label:'NPC'},
-  villain: {bg:'rgba(237,66,69,.15)',   c:'var(--red-l)',    label:'Vilão'},
-  hero_npc:{bg:'rgba(59,165,93,.15)',   c:'var(--green-l)',  label:'Herói'},
-  neutral: {bg:'rgba(255,179,0,.15)',   c:'var(--gold)',     label:'Neutro'},
+  npc:     {bg:'rgba(59,111,240,.15)',  c:'var(--blue-l)',   label:'NPC'},
+  villain: {bg:'rgba(229,72,77,.15)',   c:'var(--red-l)',    label:'Vilão'},
+  hero_npc:{bg:'rgba(47,191,113,.15)',   c:'var(--green-l)',  label:'Herói'},
+  neutral: {bg:'rgba(242,183,5,.15)',   c:'var(--gold)',     label:'Neutro'},
 }
 const POINTS_PER_LEVEL = 8
 const BASE_POINTS      = 42
@@ -253,11 +253,11 @@ export default function NpcsView() {
                     {detailNpc.alias&&<div style={{fontSize:11,color:'var(--gold)',letterSpacing:2,marginTop:2}}>"{detailNpc.alias}"</div>}
                     <div style={{display:'flex',gap:6,justifyContent:'center',marginTop:6}}>
                       <span style={{fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:3,background:rs.bg,color:rs.c,textTransform:'uppercase'}}>{rs.label}</span>
-                      {detailNpc.level&&<span style={{fontFamily:'Orbitron,monospace',fontSize:9,color:'var(--gold)',padding:'2px 6px',background:'rgba(255,179,0,.1)',borderRadius:3}}>Nível {detailNpc.level}</span>}
+                      {detailNpc.level&&<span style={{fontFamily:'Orbitron,monospace',fontSize:9,color:'var(--gold)',padding:'2px 6px',background:'rgba(242,183,5,.1)',borderRadius:3}}>Nível {detailNpc.level}</span>}
                     </div>
                   </div>
                   {detailNpc.quirk_name&&(
-                    <div style={{background:'rgba(155,89,182,.08)',border:'1px solid rgba(155,89,182,.3)',borderRadius:6,padding:'8px 12px',marginBottom:12,textAlign:'center'}}>
+                    <div style={{background:'rgba(139,92,246,.08)',border:'1px solid rgba(139,92,246,.3)',borderRadius:6,padding:'8px 12px',marginBottom:12,textAlign:'center'}}>
                       <div style={{fontSize:9,color:'var(--purple-l)',letterSpacing:2,textTransform:'uppercase',marginBottom:2}}>✨ Quirk</div>
                       <div style={{fontFamily:'Bangers,cursive',fontSize:16,color:'var(--purple-l)',letterSpacing:1}}>{detailNpc.quirk_name}</div>
                       {detailNpc.quirk_type&&<div style={{fontSize:9,color:'var(--dim)',marginTop:2}}>{detailNpc.quirk_type}</div>}

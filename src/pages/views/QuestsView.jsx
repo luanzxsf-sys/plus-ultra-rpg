@@ -11,11 +11,11 @@ import { calcMissionXp, MISSION_TYPES, getMissionType } from '../../lib/gameSyst
 import { ROLE_STYLE } from './NpcsView'
 
 const DIFF_META = {
-  'TREINO':  { bg:'rgba(88,101,242,.15)',  c:'var(--blue-l)',   b:'rgba(88,101,242,.25)'  },
-  'FÁCIL':   { bg:'rgba(59,165,93,.15)',   c:'var(--green-l)',  b:'rgba(59,165,93,.25)'   },
-  'MÉDIO':   { bg:'rgba(255,179,0,.15)',   c:'var(--gold)',     b:'rgba(255,179,0,.25)'   },
-  'DIFÍCIL': { bg:'rgba(237,66,69,.15)',   c:'var(--red-l)',    b:'rgba(237,66,69,.25)'   },
-  'ÉPICO':   { bg:'rgba(155,89,182,.15)',  c:'var(--purple-l)', b:'rgba(155,89,182,.25)'  },
+  'TREINO':  { bg:'rgba(59,111,240,.15)',  c:'var(--blue-l)',   b:'rgba(59,111,240,.25)'  },
+  'FÁCIL':   { bg:'rgba(47,191,113,.15)',   c:'var(--green-l)',  b:'rgba(47,191,113,.25)'   },
+  'MÉDIO':   { bg:'rgba(242,183,5,.15)',   c:'var(--gold)',     b:'rgba(242,183,5,.25)'   },
+  'DIFÍCIL': { bg:'rgba(229,72,77,.15)',   c:'var(--red-l)',    b:'rgba(229,72,77,.25)'   },
+  'ÉPICO':   { bg:'rgba(139,92,246,.15)',  c:'var(--purple-l)', b:'rgba(139,92,246,.25)'  },
 }
 
 function QuestModal({ quest, onClose, onSaved, userId }) {
@@ -105,7 +105,7 @@ function QuestModal({ quest, onClose, onSaved, userId }) {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6, marginTop:4 }}>
           {MISSION_TYPES.map(mt => (
             <div key={mt.key} onClick={() => set('mission_type', mt.key)}
-              style={{ border:`1px solid ${form.mission_type===mt.key?'var(--blue)':'var(--border)'}`, borderRadius:6, padding:'7px 6px', cursor:'pointer', textAlign:'center', background:form.mission_type===mt.key?'rgba(88,101,242,.12)':'transparent', transition:'all .15s' }}>
+              style={{ border:`1px solid ${form.mission_type===mt.key?'var(--blue)':'var(--border)'}`, borderRadius:6, padding:'7px 6px', cursor:'pointer', textAlign:'center', background:form.mission_type===mt.key?'rgba(59,111,240,.12)':'transparent', transition:'all .15s' }}>
               <div style={{ fontSize:18, marginBottom:3 }}>{mt.icon}</div>
               <div style={{ fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:10, color:form.mission_type===mt.key?'var(--blue-l)':'var(--muted)' }}>{mt.label}</div>
             </div>
@@ -154,7 +154,7 @@ function QuestModal({ quest, onClose, onSaved, userId }) {
               const rsLabel = ROLE_STYLE[npc.role]?.label || npc.role
               return (
                 <div key={npc.id} onClick={() => toggleNpc(npc.id)}
-                  style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 9px', borderRadius:6, border:`1px solid ${sel?'var(--gold)':'var(--border)'}`, background:sel?'rgba(255,179,0,.06)':'transparent', cursor:'pointer', transition:'all .15s' }}>
+                  style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 9px', borderRadius:6, border:`1px solid ${sel?'var(--gold)':'var(--border)'}`, background:sel?'rgba(242,183,5,.06)':'transparent', cursor:'pointer', transition:'all .15s' }}>
                   <div style={{ width:28, height:28, borderRadius:'50%', background:`linear-gradient(135deg,#374151,#1f2937)`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Bangers,cursive', fontSize:12, color:'#fff', flexShrink:0, overflow:'hidden' }}>
                     {npc.avatar_url ? <img src={npc.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : npc.name[0]}
                   </div>
@@ -186,7 +186,7 @@ function QuestModal({ quest, onClose, onSaved, userId }) {
               const selected = form.assigned_users.includes(p.id)
               return (
                 <div key={p.id} onClick={() => toggleUser(p.id)}
-                  style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 9px', borderRadius:6, border:`1px solid ${selected?'var(--blue)':'var(--border)'}`, background:selected?'rgba(88,101,242,.1)':'transparent', cursor:'pointer', transition:'all .15s' }}>
+                  style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 9px', borderRadius:6, border:`1px solid ${selected?'var(--blue)':'var(--border)'}`, background:selected?'rgba(59,111,240,.1)':'transparent', cursor:'pointer', transition:'all .15s' }}>
                   <Avatar name={char?.name||p.username} color={char?.avatar_color||'purple'} url={char?.avatar_url} size={28} />
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:selected?'var(--text-h)':'var(--text)' }}>{char?.name}</div>
@@ -344,12 +344,12 @@ export default function QuestsView({ onQuestCountChange }) {
                 {/* Badges de vinculados */}
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:8, alignItems:'center' }}>
                   {q.assigned_users?.length > 0 && (
-                    <span style={{ fontSize:9, color:'var(--blue-l)', background:'rgba(88,101,242,.1)', padding:'2px 7px', borderRadius:3, border:'1px solid rgba(88,101,242,.25)' }}>
+                    <span style={{ fontSize:9, color:'var(--blue-l)', background:'rgba(59,111,240,.1)', padding:'2px 7px', borderRadius:3, border:'1px solid rgba(59,111,240,.25)' }}>
                       👥 {q.assigned_users.length} jogador{q.assigned_users.length>1?'es':''}
                     </span>
                   )}
                   {q.assigned_npcs?.length > 0 && (
-                    <span style={{ fontSize:9, color:'var(--gold)', background:'rgba(255,179,0,.08)', padding:'2px 7px', borderRadius:3, border:'1px solid rgba(255,179,0,.2)' }}>
+                    <span style={{ fontSize:9, color:'var(--gold)', background:'rgba(242,183,5,.08)', padding:'2px 7px', borderRadius:3, border:'1px solid rgba(242,183,5,.2)' }}>
                       🎭 {q.assigned_npcs.length} NPC{q.assigned_npcs.length>1?'s':''}
                     </span>
                   )}

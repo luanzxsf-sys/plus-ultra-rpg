@@ -244,7 +244,7 @@ function EditCharModal({ char, onClose, onSaved }) {
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6,marginTop:4}}>
           {SPECIALTIES.map(sp=>(
             <div key={sp.key} onClick={()=>set('specialty',form.specialty===sp.key?'':sp.key)}
-              style={{border:`1px solid ${form.specialty===sp.key?'var(--blue)':'var(--border)'}`,borderRadius:6,padding:'7px 6px',cursor:'pointer',textAlign:'center',background:form.specialty===sp.key?'rgba(88,101,242,.12)':'transparent',transition:'all .15s'}}>
+              style={{border:`1px solid ${form.specialty===sp.key?'var(--blue)':'var(--border)'}`,borderRadius:6,padding:'7px 6px',cursor:'pointer',textAlign:'center',background:form.specialty===sp.key?'rgba(59,111,240,.12)':'transparent',transition:'all .15s'}}>
               <div style={{fontSize:18,marginBottom:3}}>{sp.icon}</div>
               <div style={{fontFamily:'Rajdhani,sans-serif',fontWeight:700,fontSize:10,color:form.specialty===sp.key?'var(--blue-l)':'var(--muted)'}}>{sp.label}</div>
             </div>
@@ -347,7 +347,7 @@ export default function FichaView({ onRefreshChar }) {
               </div>
             </div>
             {specObj&&(
-              <div style={{display:'flex',alignItems:'center',gap:7,padding:'6px 9px',background:'rgba(88,101,242,.08)',borderRadius:6,border:'1px solid rgba(88,101,242,.2)',marginBottom:8}}>
+              <div style={{display:'flex',alignItems:'center',gap:7,padding:'6px 9px',background:'rgba(59,111,240,.08)',borderRadius:6,border:'1px solid rgba(59,111,240,.2)',marginBottom:8}}>
                 <span style={{fontSize:18}}>{specObj.icon}</span>
                 <div><div style={{fontFamily:'Rajdhani,sans-serif',fontWeight:700,fontSize:12,color:'var(--blue-l)'}}>{specObj.label}</div>
                 <div style={{fontSize:9,color:'var(--dim)'}}>{specObj.passive}</div></div>
@@ -416,7 +416,7 @@ export default function FichaView({ onRefreshChar }) {
               <div className="card-title" style={{color:'var(--purple-l)'}}>✨ {char.quirk_data.name}
                 <div style={{display:'flex',gap:5,alignItems:'center'}}>
                   <span style={{fontFamily:'Orbitron,monospace',fontSize:9,color:'var(--gold)'}}>{quirkRankName(char.quirk_level||1)}</span>
-                  {char.quirk_data.type&&<span className="tag" style={{background:'rgba(155,89,182,.2)',color:'var(--purple-l)',border:'1px solid rgba(155,89,182,.3)'}}>{char.quirk_data.type}</span>}
+                  {char.quirk_data.type&&<span className="tag" style={{background:'rgba(139,92,246,.2)',color:'var(--purple-l)',border:'1px solid rgba(139,92,246,.3)'}}>{char.quirk_data.type}</span>}
                 </div>
               </div>
               {[
@@ -430,7 +430,7 @@ export default function FichaView({ onRefreshChar }) {
               ))}
               {char.quirk_data.description&&<div style={{fontSize:11,color:'var(--muted)',lineHeight:1.6,marginBottom:10}}>{char.quirk_data.description}</div>}
               {char.quirk_data.awakening&&(
-                <div style={{background:'rgba(255,179,0,.06)',border:'1px solid rgba(255,179,0,.2)',borderRadius:5,padding:8}}>
+                <div style={{background:'rgba(242,183,5,.06)',border:'1px solid rgba(242,183,5,.2)',borderRadius:5,padding:8}}>
                   <div style={{fontSize:9,color:'var(--gold)',fontWeight:700,letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>⚡ Awakening</div>
                   <div style={{fontSize:11,color:'var(--muted)'}}>{char.quirk_data.awakening}</div>
                 </div>

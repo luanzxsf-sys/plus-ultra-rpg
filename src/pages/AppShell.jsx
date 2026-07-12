@@ -177,7 +177,7 @@ export default function AppShell() {
                 <div style={{ display:'flex', gap:5 }}>
                   {[{k:'dark',l:'🌑',tip:'Escuro'},{k:'blue',l:'🌊',tip:'Azul'},{k:'light',l:'☀️',tip:'Claro'}].map(t => (
                     <button key={t.k} title={t.tip} onClick={() => handleThemeChange(t.k)}
-                      style={{ flex:1, padding:'5px 2px', border:`1px solid ${theme===t.k?'var(--blue)':'var(--border)'}`, borderRadius:4, background:theme===t.k?'rgba(88,101,242,.2)':'transparent', cursor:'pointer', fontSize:14 }}>
+                      style={{ flex:1, padding:'5px 2px', border:`1px solid ${theme===t.k?'var(--blue)':'var(--border)'}`, borderRadius:4, background:theme===t.k?'rgba(59,111,240,.2)':'transparent', cursor:'pointer', fontSize:14 }}>
                       {t.l}
                     </button>
                   ))}
@@ -198,7 +198,7 @@ export default function AppShell() {
               <span className="live" />{onlineCount}
             </span>
             {char?.name && (
-              <span style={{ fontFamily:'Orbitron,monospace', fontSize:9, color:'var(--gold)', background:'rgba(255,179,0,.1)', padding:'2px 7px', borderRadius:3, fontWeight:700 }}>
+              <span style={{ fontFamily:'Orbitron,monospace', fontSize:9, color:'var(--gold)', background:'rgba(242,183,5,.1)', padding:'2px 7px', borderRadius:3, fontWeight:700 }}>
                 Nv.{level}
               </span>
             )}

@@ -73,7 +73,7 @@ export default function QuirkView({ onRefreshChar }) {
                 <div style={{ fontFamily:'Bangers,cursive',fontSize:28,letterSpacing:2,color:'var(--purple-l)' }}>{q.name}</div>
                 <div style={{ display:'flex',gap:6,alignItems:'center',marginBottom:10 }}>
                   <span style={{ fontFamily:'Orbitron,monospace',fontSize:9,color:'var(--gold)',fontWeight:700 }}>{quirkRankName(quirkLevel)}</span>
-                  {q.type && <span className="tag" style={{ background:'rgba(155,89,182,.2)',color:'var(--purple-l)',border:'1px solid rgba(155,89,182,.3)' }}>{q.type}</span>}
+                  {q.type && <span className="tag" style={{ background:'rgba(139,92,246,.2)',color:'var(--purple-l)',border:'1px solid rgba(139,92,246,.3)' }}>{q.type}</span>}
                 </div>
                 {bonus && bonus.attr && (
                   <div style={{ display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:`${bonus.color}11`,borderRadius:6,border:`1px solid ${bonus.color}33`,marginBottom:12 }}>
@@ -90,7 +90,7 @@ export default function QuirkView({ onRefreshChar }) {
 
                 {/* Carga = Quirk Máx; Domínio = derivado do Controle */}
                 <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12 }}>
-                  <div style={{ background:'var(--card)',border:'1px solid rgba(155,89,182,.3)',borderRadius:6,padding:'8px 10px',textAlign:'center' }}>
+                  <div style={{ background:'var(--card)',border:'1px solid rgba(139,92,246,.3)',borderRadius:6,padding:'8px 10px',textAlign:'center' }}>
                     <div style={{ fontSize:8,color:'var(--dim)',textTransform:'uppercase',letterSpacing:1,marginBottom:3 }}>Quirk Máx (Carga)</div>
                     <div style={{ fontFamily:'Orbitron,monospace',fontSize:20,fontWeight:700,color:'var(--purple-l)' }}>{derived.quirkMax}</div>
                     <div style={{ fontSize:9,color:'var(--dim)',marginTop:2 }}>100 + Controle×5</div>
@@ -128,7 +128,7 @@ export default function QuirkView({ onRefreshChar }) {
 
                 {q.description && <div style={{ fontSize:11,color:'var(--muted)',lineHeight:1.6,marginBottom:10 }}>{q.description}</div>}
                 {q.awakening && (
-                  <div style={{ background:'rgba(255,179,0,.06)',border:'1px solid rgba(255,179,0,.2)',borderRadius:5,padding:9 }}>
+                  <div style={{ background:'rgba(242,183,5,.06)',border:'1px solid rgba(242,183,5,.2)',borderRadius:5,padding:9 }}>
                     <div style={{ fontSize:9,color:'var(--gold)',fontWeight:700,letterSpacing:1,textTransform:'uppercase',marginBottom:3 }}>⚡ Awakening</div>
                     <div style={{ fontSize:11,color:'var(--muted)' }}>{q.awakening}</div>
                   </div>
@@ -180,7 +180,7 @@ export default function QuirkView({ onRefreshChar }) {
                 </div>
               </div>
             ))}
-            {nextEvo && <div style={{ marginTop:8,padding:'6px 8px',background:'rgba(255,179,0,.06)',borderRadius:5,border:'1px solid rgba(255,179,0,.15)',fontSize:10,color:'var(--gold)' }}>Próxima: <strong>{nextEvo.label}</strong> (nível {nextEvo.level})</div>}
+            {nextEvo && <div style={{ marginTop:8,padding:'6px 8px',background:'rgba(242,183,5,.06)',borderRadius:5,border:'1px solid rgba(242,183,5,.15)',fontSize:10,color:'var(--gold)' }}>Próxima: <strong>{nextEvo.label}</strong> (nível {nextEvo.level})</div>}
           </div>
         </div>
 
@@ -230,16 +230,16 @@ function SkillCard({ s, attrs, quirkType, quirkLevel, quirkMax, onClick }) {
   const qCost   = avail ? calcTechQuirkCost(s, quirkMax) : 0
   const types   = [s.type, s.type2, s.type3].filter(Boolean)
   return (
-    <div onClick={onClick} style={{ background:'var(--panel)',border:`1px solid ${avail?'rgba(155,89,182,.4)':'var(--border)'}`,borderRadius:7,padding:'10px 12px',cursor:'pointer',transition:'all .2s' }}
+    <div onClick={onClick} style={{ background:'var(--panel)',border:`1px solid ${avail?'rgba(139,92,246,.4)':'var(--border)'}`,borderRadius:7,padding:'10px 12px',cursor:'pointer',transition:'all .2s' }}
       onMouseEnter={e=>e.currentTarget.style.borderColor='var(--purple)'}
-      onMouseLeave={e=>e.currentTarget.style.borderColor=avail?'rgba(155,89,182,.4)':'var(--border)'}>
+      onMouseLeave={e=>e.currentTarget.style.borderColor=avail?'rgba(139,92,246,.4)':'var(--border)'}>
       <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:4 }}>
         <div style={{ display:'flex',alignItems:'center',gap:6 }}>
           <span style={{ fontSize:18 }}>{s.icon||'⚡'}</span>
           <div>
             <div style={{ fontFamily:'Rajdhani,sans-serif',fontWeight:700,fontSize:13,color:'var(--text-h)' }}>{s.name}</div>
             <div style={{ display:'flex',gap:4,marginTop:2 }}>
-              {types.map((t,i)=><span key={i} className="tag" style={{ background:'rgba(155,89,182,.15)',color:'var(--purple-l)',border:'1px solid rgba(155,89,182,.25)',fontSize:7 }}>{t}</span>)}
+              {types.map((t,i)=><span key={i} className="tag" style={{ background:'rgba(139,92,246,.15)',color:'var(--purple-l)',border:'1px solid rgba(139,92,246,.25)',fontSize:7 }}>{t}</span>)}
             </div>
           </div>
         </div>
@@ -301,7 +301,7 @@ function QuirkEditModal({ q, char, onClose, onSave }) {
           <div style={{ fontSize:9,color:'var(--dim)' }}>Alcance extra: +{Math.floor(controle/2)}m</div>
         </div>
       </div>
-      <div style={{ textAlign:'center',marginBottom:12,padding:'8px 10px',background:'rgba(88,101,242,.06)',border:'1px solid rgba(88,101,242,.2)',borderRadius:7 }}>
+      <div style={{ textAlign:'center',marginBottom:12,padding:'8px 10px',background:'rgba(59,111,240,.06)',border:'1px solid rgba(59,111,240,.2)',borderRadius:7 }}>
         <div style={{ fontSize:9,color:'var(--dim)',textTransform:'uppercase',letterSpacing:1,marginBottom:3 }}>Alcance Base (automático)</div>
         <div style={{ fontFamily:'Orbitron,monospace',fontSize:20,fontWeight:700,color:'var(--blue-l)' }}>{calcQuirkRange(attrs,form.type)}m</div>
         <div style={{ fontSize:9,color:'var(--dim)' }}>

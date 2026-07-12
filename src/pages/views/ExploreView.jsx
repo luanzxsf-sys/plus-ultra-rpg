@@ -81,7 +81,7 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
           <button className="btn btn-g btn-sm" onClick={()=>setShowCombatSetup(true)} style={{ fontSize:9 }}>+ Add</button>
         </div>
         {targetId && (
-          <div style={{ marginBottom:6, padding:'4px 7px', background:'rgba(237,66,69,.1)', borderRadius:4, fontSize:10, color:'var(--red-l)', border:'1px solid rgba(237,66,69,.3)' }}>
+          <div style={{ marginBottom:6, padding:'4px 7px', background:'rgba(229,72,77,.1)', borderRadius:4, fontSize:10, color:'var(--red-l)', border:'1px solid rgba(229,72,77,.3)' }}>
             🎯 <strong>{combatants.find(c=>c.id===targetId)?.character_name}</strong>
             <button onClick={()=>setTargetId(null)} style={{ float:'right', background:'transparent', border:'none', color:'var(--dim)', cursor:'pointer' }}>✕</button>
           </div>
@@ -165,9 +165,9 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
                 {charSkills.map((sk, i) => (
                   <button key={i}
                     onClick={()=>{ declareAttack(sk); setShowSkillMenu(false) }}
-                    style={{ padding:'6px 8px', borderRadius:5, border:'1px solid rgba(155,89,182,.4)', background:'rgba(155,89,182,.08)', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', transition:'all .15s' }}
-                    onMouseEnter={e=>e.currentTarget.style.background='rgba(155,89,182,.2)'}
-                    onMouseLeave={e=>e.currentTarget.style.background='rgba(155,89,182,.08)'}>
+                    style={{ padding:'6px 8px', borderRadius:5, border:'1px solid rgba(139,92,246,.4)', background:'rgba(139,92,246,.08)', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', transition:'all .15s' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='rgba(139,92,246,.2)'}
+                    onMouseLeave={e=>e.currentTarget.style.background='rgba(139,92,246,.08)'}>
                     <span style={{ fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11, color:'var(--purple-l)' }}>
                       {sk.icon||'⚡'} {sk.name}
                     </span>
@@ -213,7 +213,7 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
         <div style={{ padding:10, borderBottom:'1px solid var(--border)', flexShrink:0 }}>
           <div style={{ fontSize:9, color:'var(--gold)', letterSpacing:1, textTransform:'uppercase', fontWeight:700, marginBottom:6 }}>🔍 INFORMAÇÕES REVELADAS</div>
           {discoveredInfo.map((d,i)=>(
-            <div key={i} style={{ marginBottom:6, padding:'6px 8px', background:'rgba(255,179,0,.06)', border:'1px solid rgba(255,179,0,.2)', borderRadius:5 }}>
+            <div key={i} style={{ marginBottom:6, padding:'6px 8px', background:'rgba(242,183,5,.06)', border:'1px solid rgba(242,183,5,.2)', borderRadius:5 }}>
               <div style={{ fontSize:9, color:'var(--gold)', fontWeight:700, marginBottom:2 }}>{d.actor} · {d.time}</div>
               <div style={{ fontSize:10, color:'var(--text-h)', lineHeight:1.4 }}>{d.info}</div>
             </div>
@@ -446,15 +446,15 @@ function PendingActionBanner({ action, combatants, myUserId, activeNpcId, respon
   return (
     <div style={{
       margin:'6px 10px', padding:'12px 14px',
-      background:'rgba(237,66,69,.06)',
-      border:'2px solid rgba(237,66,69,.5)',
+      background:'rgba(229,72,77,.06)',
+      border:'2px solid rgba(229,72,77,.5)',
       borderRadius:10, flexShrink:0,
-      boxShadow:'0 2px 12px rgba(237,66,69,.2)',
+      boxShadow:'0 2px 12px rgba(229,72,77,.2)',
       animation:'pendingPulse 2s ease infinite',
     }}>
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, flexWrap:'wrap' }}>
-        <span style={{ fontSize:9, fontWeight:700, padding:'3px 8px', background:'rgba(237,66,69,.25)', color:'var(--red-l)', borderRadius:4, textTransform:'uppercase', letterSpacing:1.5, flexShrink:0 }}>
+        <span style={{ fontSize:9, fontWeight:700, padding:'3px 8px', background:'rgba(229,72,77,.25)', color:'var(--red-l)', borderRadius:4, textTransform:'uppercase', letterSpacing:1.5, flexShrink:0 }}>
           ⚠️ AÇÃO PENDENTE
         </span>
         <span style={{ fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:13, color:'var(--text-h)' }}>
@@ -473,7 +473,7 @@ function PendingActionBanner({ action, combatants, myUserId, activeNpcId, respon
 
       {/* Roll requirement */}
       {action.attr_check && (
-        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 9px', background:'rgba(255,179,0,.08)', borderRadius:5, border:'1px solid rgba(255,179,0,.2)', marginBottom:8 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 9px', background:'rgba(242,183,5,.08)', borderRadius:5, border:'1px solid rgba(242,183,5,.2)', marginBottom:8 }}>
           <span style={{ fontSize:18 }}>🎲</span>
           <div>
             <div style={{ fontSize:10, color:'var(--gold)', fontWeight:700 }}>
@@ -494,9 +494,9 @@ function PendingActionBanner({ action, combatants, myUserId, activeNpcId, respon
           const responded = resolvedBy.includes(tid)
           return (
             <span key={tid} style={{ fontSize:9, padding:'2px 7px', borderRadius:3, fontWeight:700,
-              background: responded ? 'rgba(59,165,93,.2)' : 'rgba(237,66,69,.2)',
+              background: responded ? 'rgba(47,191,113,.2)' : 'rgba(229,72,77,.2)',
               color: responded ? 'var(--green-l)' : 'var(--red-l)',
-              border: `1px solid ${responded ? 'rgba(59,165,93,.3)' : 'rgba(237,66,69,.3)'}`,
+              border: `1px solid ${responded ? 'rgba(47,191,113,.3)' : 'rgba(229,72,77,.3)'}`,
             }}>
               {responded ? '✓ ' : '⏳ '}{cb?.character_name || '?'}
             </span>
@@ -519,24 +519,24 @@ function PendingActionBanner({ action, combatants, myUserId, activeNpcId, respon
                     onClick={()=>onArmRespond('dodge', action)}>
                     💨 Desviar<br/><span style={{fontSize:9,fontWeight:400}}>Roll Agilidade</span>
                   </button>
-                  <button className="btn" style={{ padding:'8px 12px', background:'rgba(88,101,242,.15)', color:'var(--blue-l)', border:'1px solid rgba(88,101,242,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+                  <button className="btn" style={{ padding:'8px 12px', background:'rgba(59,111,240,.15)', color:'var(--blue-l)', border:'1px solid rgba(59,111,240,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
                     onClick={()=>onArmRespond('defend', action)}>
                     🛡️ Defender<br/><span style={{fontSize:9,fontWeight:400}}>Roll Resistência</span>
                   </button>
-                  <button className="btn" style={{ padding:'8px 12px', background:'rgba(237,66,69,.12)', color:'var(--red-l)', border:'1px solid rgba(237,66,69,.35)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+                  <button className="btn" style={{ padding:'8px 12px', background:'rgba(229,72,77,.12)', color:'var(--red-l)', border:'1px solid rgba(229,72,77,.35)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
                     onClick={()=>onArmRespond('take', action)}>
                     💥 Absorver<br/><span style={{fontSize:9,fontWeight:400}}>Dano completo</span>
                   </button>
                 </>
               )}
               {action.attr_check && (!isAttackType || !['agilidade','resistencia'].includes(action.attr_check)) && (
-                <button className="btn" style={{ padding:'8px 12px', background:'rgba(155,89,182,.15)', color:'var(--purple-l)', border:'1px solid rgba(155,89,182,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+                <button className="btn" style={{ padding:'8px 12px', background:'rgba(139,92,246,.15)', color:'var(--purple-l)', border:'1px solid rgba(139,92,246,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
                   onClick={()=>onArmRespond(action.attr_check, action)}>
                   🎲 Rolar {atMeta?.label}<br/><span style={{fontSize:9,fontWeight:400}}>DC {action.dc||12}</span>
                 </button>
               )}
               {!isAttackType && !action.attr_check && (
-                <button className="btn" style={{ padding:'8px 12px', background:'rgba(155,89,182,.15)', color:'var(--purple-l)', border:'1px solid rgba(155,89,182,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
+                <button className="btn" style={{ padding:'8px 12px', background:'rgba(139,92,246,.15)', color:'var(--purple-l)', border:'1px solid rgba(139,92,246,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
                   onClick={()=>onArmRespond('ack', action)}>
                   ✅ Reagir<br/><span style={{fontSize:9,fontWeight:400}}>Sem roll</span>
                 </button>
@@ -690,7 +690,7 @@ function DeclarePendingModal({ session, combatants, skills, missionDifficulty, a
           <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
             {[...players,...villains].map(cb=>(
               <div key={cb.id} onClick={()=>toggleTarget(cb.id)}
-                style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 9px', borderRadius:5, border:`1px solid ${form.targets.includes(cb.id)?'var(--red)':'var(--border)'}`, background:form.targets.includes(cb.id)?'rgba(237,66,69,.1)':'transparent', cursor:'pointer' }}>
+                style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 9px', borderRadius:5, border:`1px solid ${form.targets.includes(cb.id)?'var(--red)':'var(--border)'}`, background:form.targets.includes(cb.id)?'rgba(229,72,77,.1)':'transparent', cursor:'pointer' }}>
                 <div style={{ width:8, height:8, borderRadius:'50%', background:cb.type==='villain'?'var(--red)':cb.type==='npc'?'var(--gold)':'var(--green)', flexShrink:0 }}/>
                 <span style={{ fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:12, flex:1 }}>{cb.character_name}</span>
                 <span style={{ fontSize:9, color:'var(--dim)' }}>HP:{cb.hp}/{cb.hp_max}</span>
@@ -1289,12 +1289,12 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             {!session&&<button className="btn btn-red btn-sm" onClick={()=>setShowCombatSetup(true)}>⚔️ Iniciar</button>}
             {session&&<button className="btn btn-danger btn-sm" onClick={endCombat}>🏁</button>}
             {session&&(
-              <button className="btn btn-sm" style={{ background:'rgba(237,66,69,.15)',color:'var(--red-l)',border:'1px solid rgba(237,66,69,.3)' }}
+              <button className="btn btn-sm" style={{ background:'rgba(229,72,77,.15)',color:'var(--red-l)',border:'1px solid rgba(229,72,77,.3)' }}
                 onClick={()=>setShowDeclareModal(true)}>⚠️ Declarar</button>
             )}
-            <button className="btn btn-sm" style={{ background:'rgba(255,179,0,.12)',color:'var(--gold)',border:'1px solid rgba(255,179,0,.3)' }}
+            <button className="btn btn-sm" style={{ background:'rgba(242,183,5,.12)',color:'var(--gold)',border:'1px solid rgba(242,183,5,.3)' }}
               onClick={()=>setShowRollModal(true)}>🎲 Rolar</button>
-            <button className="btn btn-g btn-sm" style={{ color:activeNpc?'var(--gold)':'var(--muted)',borderColor:activeNpc?'rgba(255,179,0,.4)':'var(--border)' }}
+            <button className="btn btn-g btn-sm" style={{ color:activeNpc?'var(--gold)':'var(--muted)',borderColor:activeNpc?'rgba(242,183,5,.4)':'var(--border)' }}
               onClick={()=>setShowNpcPicker(true)}>🎭 {activeNpc?activeNpc.name.slice(0,7):'NPC'}</button>
           </div>
         </div>
@@ -1321,8 +1321,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                   <div className="msg-body">
                     <div className="msg-head">
                       <span className="msg-name" style={{ color:TEXT_COLOR[msg.author_color]||'var(--text-h)' }}>{msg.author_name}</span>
-                      {msg.author_alias&&<span className="tag" style={{ background:'rgba(155,89,182,.15)',color:'var(--purple-l)',border:'1px solid rgba(155,89,182,.3)',fontSize:7 }}>{msg.author_alias}</span>}
-                      {isNpc&&<span className="tag" style={{ background:'rgba(255,179,0,.15)',color:'var(--gold)',border:'1px solid rgba(255,179,0,.3)',fontSize:7 }}>NPC</span>}
+                      {msg.author_alias&&<span className="tag" style={{ background:'rgba(139,92,246,.15)',color:'var(--purple-l)',border:'1px solid rgba(139,92,246,.3)',fontSize:7 }}>{msg.author_alias}</span>}
+                      {isNpc&&<span className="tag" style={{ background:'rgba(242,183,5,.15)',color:'var(--gold)',border:'1px solid rgba(242,183,5,.3)',fontSize:7 }}>NPC</span>}
                       <span className="msg-time">{new Date(msg.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
                     </div>
                     <div className={isActionMsg ? 'msg-text' : `msg-text ${cls}`}><ActionMessageText content={msg.content} color={actionColor} /></div>
@@ -1336,7 +1336,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
 
           {/* NPC bar */}
           {activeNpc&&(
-            <div className="chat-input-npc" style={{ borderBottom:'1px solid rgba(255,179,0,.2)',background:'rgba(255,179,0,.05)' }}>
+            <div className="chat-input-npc" style={{ borderBottom:'1px solid rgba(242,183,5,.2)',background:'rgba(242,183,5,.05)' }}>
               <div style={{ width:20,height:20,borderRadius:'50%',background:avatarBg(activeNpc.avatar_color||'gray'),display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Bangers,cursive',fontSize:9,color:'#fff',border:'1px solid var(--gold)',flexShrink:0 }}>{activeNpc.name[0]}</div>
               <span style={{ fontSize:10,color:'var(--gold)',fontWeight:700 }}>Como: {activeNpc.name}</span>
               <button onClick={()=>setActiveNpc(null)} style={{ marginLeft:'auto',background:'transparent',border:'none',color:'var(--dim)',cursor:'pointer',fontSize:14 }}>✕</button>
@@ -1345,7 +1345,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
 
           {/* Target indicator */}
           {session&&targetId&&(
-            <div style={{ padding:'4px 12px',background:'rgba(237,66,69,.08)',borderBottom:'1px solid rgba(237,66,69,.2)',flexShrink:0,display:'flex',alignItems:'center',gap:8 }}>
+            <div style={{ padding:'4px 12px',background:'rgba(229,72,77,.08)',borderBottom:'1px solid rgba(229,72,77,.2)',flexShrink:0,display:'flex',alignItems:'center',gap:8 }}>
               <span style={{ fontSize:10,color:'var(--red-l)' }}>🎯 Alvo: <strong>{combatants.find(c=>c.id===targetId)?.character_name}</strong></span>
               <button onClick={()=>setTargetId(null)} style={{ background:'transparent',border:'none',color:'var(--dim)',cursor:'pointer',fontSize:12,marginLeft:'auto' }}>✕</button>
             </div>
@@ -1357,7 +1357,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             const resolvedBy=pa.resolved_by||[]
             return pa.is_pending === true && pa.resolved !== true && (pa.pending_for||[]).some(id=>myIds.includes(id)) && !resolvedBy.some(id=>myIds.includes(id))
           }).length>0&&(
-            <div style={{ padding:'7px 12px',background:'rgba(237,66,69,.12)',borderBottom:'1px solid rgba(237,66,69,.4)',flexShrink:0,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
+            <div style={{ padding:'7px 12px',background:'rgba(229,72,77,.12)',borderBottom:'1px solid rgba(229,72,77,.4)',flexShrink:0,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
               <span style={{ fontSize:11,fontWeight:700,color:'var(--red-l)',flexShrink:0 }}>⚠️ Você está sendo atacado!</span>
               <button className="btn btn-g btn-sm" style={{ marginLeft:'auto' }} onClick={()=>setShowSkillMenu(true)}>Responder ⚔️</button>
             </div>
@@ -1365,7 +1365,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
 
           {/* Responding to a pending action — describe it and send in the chat below */}
           {respondMode && (
-            <div style={{ padding:'7px 12px',background:'rgba(237,66,69,.1)',borderBottom:'1px solid rgba(237,66,69,.4)',flexShrink:0,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
+            <div style={{ padding:'7px 12px',background:'rgba(229,72,77,.1)',borderBottom:'1px solid rgba(229,72,77,.4)',flexShrink:0,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
               <span style={{ fontSize:11,fontWeight:700,color:'var(--red-l)',minWidth:0,flex:'1 1 auto' }}>
                 {RESPOND_LABELS[respondMode.type]||`🎲 Rolar ${ATTR_META[respondMode.type]?.label||respondMode.type}`} — descreva e envie no chat
               </span>
@@ -1379,7 +1379,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
               <button
                 className="combat-toggle-btn"
                 onClick={()=>setShowSkillMenu(s=>!s)}
-                style={{ width:36,height:36,borderRadius:8,background:showSkillMenu?'rgba(237,66,69,.2)':'var(--panel)',border:`1px solid ${showSkillMenu?'var(--red)':'var(--border)'}`,color:showSkillMenu?'var(--red-l)':'var(--muted)',cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,transition:'all .15s' }}
+                style={{ width:36,height:36,borderRadius:8,background:showSkillMenu?'rgba(229,72,77,.2)':'var(--panel)',border:`1px solid ${showSkillMenu?'var(--red)':'var(--border)'}`,color:showSkillMenu?'var(--red-l)':'var(--muted)',cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,transition:'all .15s' }}
                 title="Painel de Combate"
               >⚔️</button>
             )}
@@ -1586,13 +1586,13 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
       {showNpcPicker&&(
         <Modal title="🎭 Vestir NPC" onClose={()=>setShowNpcPicker(false)} maxWidth={400}>
           <div style={{ fontSize:11,color:'var(--muted)',marginBottom:12 }}>Suas mensagens e ações serão executadas como o NPC.</div>
-          <div className="player-row" onClick={()=>{setActiveNpc(null);setShowNpcPicker(false)}} style={{ padding:'8px 10px',borderRadius:6,border:`1px solid ${!activeNpc?'var(--blue)':'var(--border)'}`,marginBottom:6,background:!activeNpc?'rgba(88,101,242,.08)':'transparent',cursor:'pointer' }}>
+          <div className="player-row" onClick={()=>{setActiveNpc(null);setShowNpcPicker(false)}} style={{ padding:'8px 10px',borderRadius:6,border:`1px solid ${!activeNpc?'var(--blue)':'var(--border)'}`,marginBottom:6,background:!activeNpc?'rgba(59,111,240,.08)':'transparent',cursor:'pointer' }}>
             <Avatar name={char?.name||profile?.username} color={char?.avatar_color||'purple'} url={char?.avatar_url} size={28}/>
             <div className="p-info"><div className="p-name">Você mesmo — {char?.name||profile?.username}</div></div>
             {!activeNpc&&<span style={{ color:'var(--blue-l)',fontSize:14 }}>✓</span>}
           </div>
           {npcs.map(npc=>(
-            <div key={npc.id} className="player-row" onClick={()=>{setActiveNpc(npc);setShowNpcPicker(false)}} style={{ padding:'8px 10px',borderRadius:6,border:`1px solid ${activeNpc?.id===npc.id?'var(--gold)':'var(--border)'}`,marginBottom:6,background:activeNpc?.id===npc.id?'rgba(255,179,0,.06)':'transparent',cursor:'pointer' }}>
+            <div key={npc.id} className="player-row" onClick={()=>{setActiveNpc(npc);setShowNpcPicker(false)}} style={{ padding:'8px 10px',borderRadius:6,border:`1px solid ${activeNpc?.id===npc.id?'var(--gold)':'var(--border)'}`,marginBottom:6,background:activeNpc?.id===npc.id?'rgba(242,183,5,.06)':'transparent',cursor:'pointer' }}>
               <Avatar name={npc.name} color={npc.avatar_color||'gray'} url={npc.avatar_url} size={28}/>
               <div className="p-info">
                 <div className="p-name">{npc.name}</div>

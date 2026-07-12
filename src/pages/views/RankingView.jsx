@@ -12,9 +12,8 @@ const DEPARTMENTS = { heroes:{ label:'🦸 Heróis', color:'var(--gold)' }, inve
 function RankModal({ entry, onClose, onSaved, userId }) {
   const [profiles,setProfiles]=useState([])
   const [selectedUserId,setSelectedUserId]=useState(entry?.user_id||'')
-  const [form,setForm]=useState({ points:entry?.points||0, rank_badge:entry?.rank_badge||'', department:entry?.department||'heroes', color:entry?.color||'blue' })
+  const [form,setForm]=useState({ rank_badge:entry?.rank_badge||'', department:entry?.department||'heroes' })
   const [saving,setSaving]=useState(false)
-  const colors=['red','blue','green','purple','gold','pink','teal','gray']
   function set(k,v){setForm(f=>({...f,[k]:v}))}
 
   useEffect(()=>{
@@ -24,16 +23,17 @@ function RankModal({ entry, onClose, onSaved, userId }) {
   const selected = profiles.find(p=>p.user_id===selectedUserId)
 
   async function handle(){
-    if(!selectedUserId && !entry){ notify('❌ Anexe uma ficha','error'); return }
+    if(!selectedUserId && !entry){ notify('❌ Selecione um herói','error'); return }
     setSaving(true)
     const payload={
-      ...form,
-      points:Number(form.points),
-      user_id: selectedUserId || entry?.user_id,
+      rank_badge:  form.rank_badge,
+      department:  form.department,
+      user_id:     selectedUserId || entry?.user_id,
       player_name: selected?.name || entry?.player_name,
       char_name:   selected?.alias || selected?.name || entry?.char_name,
       quirk_name:  selected?.quirk_data?.name || entry?.quirk_name || '',
-      color:       selected?.avatar_color || form.color,
+      color:       selected?.avatar_color || entry?.color || 'blue',
+      points:      entry?.points || 0,
     }
     if(entry?.id) payload.id=entry.id
     const{error}=await upsertRankEntry(payload)
@@ -44,7 +44,7 @@ function RankModal({ entry, onClose, onSaved, userId }) {
   return (
     <Modal title={entry?'✏️ Editar Entrada':'+ Ranking'} onClose={onClose}>
       <div className="field">
-        <label>Anexar Ficha *</label>
+        <label>Herói *</label>
         <select className="input" value={selectedUserId} onChange={e=>setSelectedUserId(e.target.value)}>
           <option value="">— Selecionar personagem —</option>
           {profiles.map(p=>(
@@ -53,21 +53,30 @@ function RankModal({ entry, onClose, onSaved, userId }) {
         </select>
         {entry && !selectedUserId && <div style={{fontSize:9,color:'var(--dim)',marginTop:4}}>Mantendo ficha atual: {entry.player_name}</div>}
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-        <div className="field"><label>Pontuação (XP)</label><input className="input" type="number" value={form.points} onChange={e=>set('points',e.target.value)}/></div>
-        <div className="field"><label>Rank / Badge <span style={{color:'var(--dim)',fontWeight:400}}>(livre — conforme a lore)</span></label><input className="input" value={form.rank_badge} onChange={e=>set('rank_badge',e.target.value)} placeholder="Ex: Rank B"/></div>
-        <div className="field"><label>Departamento</label>
-          <select className="input" value={form.department} onChange={e=>set('department',e.target.value)}>
-            {Object.entries(DEPARTMENTS).map(([k,d])=><option key={k} value={k}>{d.label}</option>)}
-          </select>
-        </div>
-        <div className="field"><label>Cor</label>
-          <select className="input" value={form.color} onChange={e=>set('color',e.target.value)}>
-            {colors.map(c=><option key={c} value={c}>{c}</option>)}
-          </select>
+      <div className="field">
+        <label>Rank <span style={{color:'var(--dim)',fontWeight:400}}>(livre — conforme a lore)</span></label>
+        <input className="input" value={form.rank_badge} onChange={e=>set('rank_badge',e.target.value)} placeholder="Ex: Rank B"/>
+      </div>
+      <div className="field">
+        <label>Faz parte do Departamento Investigativo?</label>
+        <div style={{display:'flex',gap:6}}>
+          <button type="button" onClick={()=>set('department','heroes')}
+            style={{flex:1,padding:'9px',borderRadius:6,fontSize:12,fontWeight:700,cursor:'pointer',
+              background:form.department==='heroes'?'var(--gold)':'var(--panel)',
+              color:form.department==='heroes'?'#000':'var(--muted)',
+              border:`1px solid ${form.department==='heroes'?'var(--gold)':'var(--border)'}`}}>
+            🦸 Não — Herói comum
+          </button>
+          <button type="button" onClick={()=>set('department','investigative')}
+            style={{flex:1,padding:'9px',borderRadius:6,fontSize:12,fontWeight:700,cursor:'pointer',
+              background:form.department==='investigative'?'var(--blue)':'var(--panel)',
+              color:form.department==='investigative'?'#fff':'var(--muted)',
+              border:`1px solid ${form.department==='investigative'?'var(--blue)':'var(--border)'}`}}>
+            🔎 Sim — Investigativo
+          </button>
         </div>
       </div>
-      <div style={{display:'flex',gap:6}}>
+      <div style={{display:'flex',gap:6,marginTop:14}}>
         <button className="btn btn-p btn-lg" onClick={handle} disabled={saving} style={{flex:1}}>{saving?'⏳...':'💾 Salvar'}</button>
         {entry&&<button className="btn btn-danger" onClick={async()=>{if(!confirm('Remover?'))return;await deleteRankEntry(entry.id);notify('🗑️ Removido');onSaved()}}>🗑️</button>}
         <button className="btn btn-g" onClick={onClose}>Cancelar</button>
@@ -185,9 +194,9 @@ export default function RankingView() {
             const dept = DEPARTMENTS[e.department||'heroes']
             return(
               <div key={e.id} onDoubleClick={()=>{setEditEntry(e);setShowAdd(true)}}
-                style={{background:'var(--card)',border:`1px solid ${isFirst?'rgba(255,179,0,.4)':'var(--border)'}`,borderRadius:9,padding:isFirst?'18px 12px':'14px 10px',textAlign:'center',cursor:'pointer',transition:'all .2s'}}
+                style={{background:'var(--card)',border:`1px solid ${isFirst?'rgba(242,183,5,.4)':'var(--border)'}`,borderRadius:9,padding:isFirst?'18px 12px':'14px 10px',textAlign:'center',cursor:'pointer',transition:'all .2s'}}
                 onMouseEnter={e=>e.currentTarget.style.borderColor='var(--glow)'}
-                onMouseLeave={ev=>ev.currentTarget.style.borderColor=isFirst?'rgba(255,179,0,.4)':'var(--border)'}>
+                onMouseLeave={ev=>ev.currentTarget.style.borderColor=isFirst?'rgba(242,183,5,.4)':'var(--border)'}>
                 <span style={{fontSize:isFirst?32:26,display:'block',marginBottom:7}}>{medals[pi]}</span>
                 <Avatar name={e.player_name} color={e.color} size={isFirst?58:44} style={{margin:'0 auto 7px'}}/>
                 <div style={{fontFamily:'Bangers,cursive',fontSize:isFirst?17:14,letterSpacing:1,color:'var(--text-h)'}}>{e.player_name}</div>
@@ -196,7 +205,7 @@ export default function RankingView() {
                 <div style={{fontFamily:'Orbitron,monospace',fontSize:isFirst?16:13,fontWeight:700,color:'var(--gold)'}}>{e.points?.toLocaleString()} XP</div>
                 <div style={{display:'flex',gap:3,justifyContent:'center',flexWrap:'wrap',marginTop:4}}>
                   {e.rank_badge&&<div style={{fontSize:8,fontWeight:700,padding:'2px 6px',borderRadius:3,background:`${RANK_COLORS[e.rank_badge]||'var(--blue-l)'}22`,color:RANK_COLORS[e.rank_badge]||'var(--blue-l)',border:`1px solid ${RANK_COLORS[e.rank_badge]||'var(--blue-l)'}44`,display:'inline-block'}}>{e.rank_badge}</div>}
-                  {e.department==='investigative'&&<div style={{fontSize:8,fontWeight:700,padding:'2px 6px',borderRadius:3,background:'rgba(88,101,242,.15)',color:'var(--blue-l)',border:'1px solid rgba(88,101,242,.3)',display:'inline-block'}}>{dept.label}</div>}
+                  {e.department==='investigative'&&<div style={{fontSize:8,fontWeight:700,padding:'2px 6px',borderRadius:3,background:'rgba(59,111,240,.15)',color:'var(--blue-l)',border:'1px solid rgba(59,111,240,.3)',display:'inline-block'}}>{dept.label}</div>}
                 </div>
               </div>
             )
@@ -218,7 +227,7 @@ export default function RankingView() {
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontFamily:'Rajdhani,sans-serif',fontWeight:700,fontSize:13,color:'var(--text-h)',display:'flex',alignItems:'center',gap:5,flexWrap:'wrap'}}>
                     {e.player_name}
-                    {e.department==='investigative'&&<span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:3,background:'rgba(88,101,242,.15)',color:'var(--blue-l)',border:'1px solid rgba(88,101,242,.3)'}}>🔎 Investigativo</span>}
+                    {e.department==='investigative'&&<span style={{fontSize:8,fontWeight:700,padding:'1px 5px',borderRadius:3,background:'rgba(59,111,240,.15)',color:'var(--blue-l)',border:'1px solid rgba(59,111,240,.3)'}}>🔎 Investigativo</span>}
                   </div>
                   <div style={{fontSize:10,color:'var(--muted)'}}>{e.char_name}{e.quirk_name?' · '+e.quirk_name:''}</div>
                 </div>
@@ -252,7 +261,7 @@ export default function RankingView() {
             const isFirst=heroesTop3.indexOf(h)===0
             return(
               <div key={h.id}
-                style={{background:'var(--card)',border:`1px solid ${isFirst?'rgba(59,165,93,.4)':'var(--border)'}`,borderRadius:9,padding:isFirst?'18px 12px':'14px 10px',textAlign:'center',transition:'all .2s'}}>
+                style={{background:'var(--card)',border:`1px solid ${isFirst?'rgba(47,191,113,.4)':'var(--border)'}`,borderRadius:9,padding:isFirst?'18px 12px':'14px 10px',textAlign:'center',transition:'all .2s'}}>
                 <span style={{fontSize:isFirst?32:26,display:'block',marginBottom:7}}>{medals[pi]}</span>
                 <Avatar name={h.name} url={h.avatar_url} color={h.avatar_color||'gray'} size={isFirst?58:44} style={{margin:'0 auto 7px'}}/>
                 <div style={{fontFamily:'Bangers,cursive',fontSize:isFirst?17:14,letterSpacing:1,color:'var(--text-h)'}}>{h.name}</div>

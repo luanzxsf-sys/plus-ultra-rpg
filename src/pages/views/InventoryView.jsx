@@ -38,7 +38,7 @@ export default function InventoryView() {
             <div key={item.id}
               onClick={()=>setSelected(item)}
               onDoubleClick={()=>{ setEditItem(item); setShowAdd(true) }}
-              style={{ background:'var(--card)', border:`1px solid ${selected?.id===item.id?'var(--glow)':item.equipped?'rgba(255,179,0,.4)':'var(--border)'}`, borderRadius:8, padding:'10px 7px', textAlign:'center', cursor:'pointer', position:'relative', transition:'all .2s' }}
+              style={{ background:'var(--card)', border:`1px solid ${selected?.id===item.id?'var(--glow)':item.equipped?'rgba(242,183,5,.4)':'var(--border)'}`, borderRadius:8, padding:'10px 7px', textAlign:'center', cursor:'pointer', position:'relative', transition:'all .2s' }}
               onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'}
               onMouseLeave={e=>e.currentTarget.style.transform='none'}
             >
