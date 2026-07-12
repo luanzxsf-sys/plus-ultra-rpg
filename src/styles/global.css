@@ -93,8 +93,15 @@ body {
   overflow: hidden;
 }
 @media (max-width: 768px) {
-  body { overflow: auto; }
-  html, body, #root { height: auto; min-height: 100dvh; }
+  /* Keep the app shell fixed to the viewport, like a native app — each view
+     already scrolls internally (flex:1 + overflowY:auto), so we must NOT
+     also let the page/body scroll, or the topbar and chat input bar end up
+     fighting two scroll contexts at once and appear to jump/disappear. */
+  html, body, #root { height: 100dvh; overflow: hidden; }
+
+  /* iPhone notch / home indicator safe areas */
+  .topbar { padding-top: env(safe-area-inset-top); height: calc(48px + env(safe-area-inset-top)); }
+  .chat-input-body { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -264,7 +271,7 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
 .pbar-fill { height: 100%; border-radius: 2px; transition: width .4s; }
 
 /* ── APP LAYOUT ── */
-.app { display: flex; height: 100vh; overflow: hidden; position: relative; }
+.app { display: flex; height: 100dvh; overflow: hidden; position: relative; }
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 
 /* ── SIDEBAR ── */
@@ -478,8 +485,6 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
 
   .hamburger { display: flex; align-items: center; justify-content: center; }
 
-  .main { width: 100%; height: auto; min-height: 100dvh; }
-
   /* Chat: empilha verticalmente no mobile */
   .chat-wrap-grid { grid-template-columns: 1fr !important; }
   .chat-right { display: none !important; }
@@ -510,11 +515,9 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
   }
 
   /* Chat height mobile */
-  .chat-main-col { height: calc(100dvh - 48px) !important; }
+  .chat-main-col { min-height: 0; }
 
   .modal { max-height: 95dvh; }
-
-  .topbar { position: sticky; top: 0; z-index: 50; }
 }
 
 @media (max-width: 420px) {

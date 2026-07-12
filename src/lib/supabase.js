@@ -670,7 +670,9 @@ export async function addXpToUsers(userIds, xpAmount) {
 // ─── RANKING realtime helpers ────────────────────────────────
 
 export async function upsertRankFromCharacter(userId, charData) {
-  // Cria ou atualiza entrada no ranking baseada na ficha
+  // Cria ou atualiza entrada no ranking baseada na ficha.
+  // NÃO mexe em rank_badge/department — esses são manuais, definidos pelo
+  // narrador conforme a lore, e não devem ser resetados a cada XP ganho.
   const { data: existing } = await supabase
     .from('ranking').select('id').eq('user_id', userId).maybeSingle()
   const payload = {
@@ -679,7 +681,6 @@ export async function upsertRankFromCharacter(userId, charData) {
     char_name:   charData.alias || charData.name || '',
     quirk_name:  charData.quirk_data?.name || '',
     points:      charData.xp || 0,
-    rank_badge:  '',
     color:       charData.avatar_color || 'blue',
   }
   if (existing?.id) {
@@ -687,6 +688,8 @@ export async function upsertRankFromCharacter(userId, charData) {
     const { data, error } = await supabase.from('ranking').update(payload).eq('id', existing.id).select().single()
     return { data, error }
   }
+  payload.rank_badge = ''
+  payload.department = 'heroes'
   const { data, error } = await supabase.from('ranking').insert(payload).select().single()
   return { data, error }
 }
