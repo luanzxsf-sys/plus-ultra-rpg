@@ -8,6 +8,14 @@ import { notify } from '../../components/Toast'
 // Mensagens ficam em location_id = null (chat global)
 const GLOBAL_LOCATION_ID = null
 
+function withMentions(text) {
+  if (!text || !text.includes('@')) return text
+  const parts = text.split(/(@[\p{L}0-9_]+(?:\s[\p{L}0-9_]+)?)/gu)
+  return parts.map((p,i) => p.startsWith('@') && p.length>1
+    ? <span key={i} style={{ color:'var(--blue-l)', fontWeight:700, background:'rgba(59,111,240,.15)', borderRadius:3, padding:'0 3px' }}>{p}</span>
+    : p)
+}
+
 export default function ChatView({ onViewChange }) {
   const { user, profile, character } = useAuth()
   const [messages, setMessages]       = useState([])
@@ -108,7 +116,7 @@ export default function ChatView({ onViewChange }) {
                     {isMe  && <span className="tag" style={{ background:'rgba(59,111,240,.15)', color:'var(--blue-l)', border:'1px solid rgba(59,111,240,.3)', fontSize:7 }}>VOCÊ</span>}
                     <span className="msg-time">{new Date(msg.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
                   </div>
-                  <div className="msg-text">{msg.content}</div>
+                  <div className="msg-text">{withMentions(msg.content)}</div>
                   {msg.image_url && <img src={msg.image_url} alt="" className="msg-img"/>}
                 </div>
               </div>

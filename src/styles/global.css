@@ -85,6 +85,36 @@
   --sidebar-w: 210px;
 }
 
+/* Patrulha Noturna — quase monocromático, um único acento neon ciano.
+   Pra sessões dramáticas/sérias — sem o colorido dos outros temas. */
+[data-theme="night"] {
+  --bg: #000000;
+  --card: #0A0A0A;
+  --panel: #0D0D0D;
+  --surface: #131313;
+  --border: #232323;
+  --glow: #00E5FF;
+  --blue: #00E5FF;
+  --blue-l: #6FF5FF;
+  --gold: #00E5FF;
+  --gold-d: #00B8CC;
+  --red: #FF3B3B;
+  --red-l: #FF7A7A;
+  --green: #00E5FF;
+  --green-l: #6FF5FF;
+  --purple: #00E5FF;
+  --purple-l: #6FF5FF;
+  --teal: #00E5FF;
+  --teal-l: #6FF5FF;
+  --pink: #00E5FF;
+  --pink-l: #6FF5FF;
+  --text: #C4C4C4;
+  --text-h: #FFFFFF;
+  --muted: #6E6E6E;
+  --dim: #454545;
+  --sidebar-w: 210px;
+}
+
 html, body, #root { height: 100%; }
 body {
   font-family: 'Roboto Condensed', sans-serif;
@@ -245,6 +275,13 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
 }
 .modal::-webkit-scrollbar { width: 3px; }
 @keyframes mIn { from { transform: scale(.96) translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes combatFlash {
+  0%   { opacity: .55; }
+  15%  { opacity: .05; }
+  30%  { opacity: .4; }
+  50%  { opacity: 0; }
+  100% { opacity: 0; }
+}
 .modal-hdr { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; gap: 8px; }
 .modal-title { font-family: 'Bangers', cursive; font-size: 20px; letter-spacing: 2px; color: var(--text-h); }
 .modal-close { background: transparent; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; line-height: 1; }
@@ -294,6 +331,8 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
   background: var(--card);
   border-right: 1px solid var(--border);
   display: flex;
+  transition: width .18s ease;
+  position: relative;
   flex-direction: column;
   overflow: hidden;
   transition: transform .25s ease;
@@ -321,6 +360,35 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
 .nav-item.active { color: var(--text-h); background: linear-gradient(90deg, color-mix(in srgb, var(--blue) 28%, transparent), transparent); border-left-color: var(--blue); box-shadow: -2px 0 12px -4px var(--blue); }
 .nav-item .ico { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
 .nbadge { margin-left: auto; background: var(--red); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
+
+.sidebar.collapsed { width: 60px; }
+.sidebar.collapsed .logo { padding: 14px 4px; }
+.sidebar.collapsed .logo-title { font-size: 16px; letter-spacing: 1px; }
+.sidebar-collapse-btn {
+  position: absolute;
+  top: 12px;
+  right: -11px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: all .15s;
+}
+.sidebar-collapse-btn:hover { color: var(--text-h); border-color: var(--glow); box-shadow: 0 0 8px color-mix(in srgb, var(--glow) 40%, transparent); }
+.nav-item.collapsed { justify-content: center; padding: 10px 0; margin: 1px 8px; }
+.nav-item.collapsed .nbadge { position: absolute; top: 2px; right: 2px; margin-left: 0; }
+@media (max-width: 768px) {
+  .sidebar-collapse-btn { display: none; }
+}
 
 /* ── TOPBAR ── */
 .topbar {
@@ -403,6 +471,7 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
 .msg-intel   { color: var(--gold);     background: rgba(242,183,5,.08);   border-left: 2px solid var(--gold);   padding: 5px 9px; border-radius: 0 7px 7px 0; }
 .msg-charisma{ color: var(--pink-l);   background: rgba(240,82,156,.08);  border-left: 2px solid var(--pink);   padding: 5px 9px; border-radius: 0 7px 7px 0; }
 .msg-system  { color: var(--dim);      font-style: italic; font-size: 11px; }
+.msg-event   { color: var(--gold);     font-style: italic; font-size: 11px; background: rgba(242,183,5,.06); border-left: 3px solid var(--gold); padding: 5px 9px; border-radius: 0 7px 7px 0; }
 .msg-npc-action { color: var(--red-l); background: rgba(229,72,77,.06); border: 1px solid rgba(229,72,77,.2); border-radius: 6px; padding: 8px 10px; margin-top: 4px; }
 .msg-img { max-width: 240px; border-radius: 6px; margin-top: 5px; display: block; border: 1px solid var(--border); }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { upsertCharacter, resetCharacterFull, uploadAvatar, getPresetTraits, getCharacterTraits, addTraitToCharacter, removeTraitFromCharacter, createCustomTrait } from '../../lib/supabase'
+import { upsertCharacter, resetCharacterFull, uploadAvatar, getPresetTraits, getCharacterTraits, addTraitToCharacter, removeTraitFromCharacter, createCustomTrait, getUserActivity } from '../../lib/supabase'
 import { notify } from '../../components/Toast'
 import Modal from '../../components/Modal'
 import Avatar, { avatarBg } from '../../components/Avatar'
@@ -10,6 +10,7 @@ import {
   SPECIALTIES, getSpecialty, calcAttrsWithSpecialty,
   QUIRK_TYPE_BONUSES, quirkRankName, calcLevel, POINTS_PER_LEVEL
 } from '../../lib/gameSystem'
+import { computeProgress, ACHIEVEMENTS } from '../../lib/achievements'
 
 const COLORS = [
   {key:'purple',bg:'linear-gradient(135deg,#7c3aed,#5b21b6)'},{key:'blue',bg:'linear-gradient(135deg,#2563eb,#1d4ed8)'},
@@ -278,6 +279,99 @@ function EditCharModal({ char, onClose, onSaved }) {
 }
 
 /* ── MAIN VIEW ── */
+const DIARY_ICONS = { attack:'⚔️', skill:'✨', defend:'🛡️', dodge:'💨', heal:'💚', intel:'🧠', charisma:'💬', system:'⚠️', take:'💥' }
+function HeroDiaryCard({ userId }) {
+  const [entries,setEntries]=useState(null)
+  const [open,setOpen]=useState(false)
+  useEffect(()=>{
+    if(open && entries===null) getUserActivity(userId,25).then(({data})=>setEntries(data))
+  },[open])
+  function timeAgo(iso){
+    const diff=(Date.now()-new Date(iso).getTime())/1000
+    if(diff<60) return 'agora'
+    if(diff<3600) return `${Math.floor(diff/60)}min atrás`
+    if(diff<86400) return `${Math.floor(diff/3600)}h atrás`
+    return `${Math.floor(diff/86400)}d atrás`
+  }
+  return (
+    <div className="card">
+      <div className="card-title" style={{cursor:'pointer'}} onClick={()=>setOpen(o=>!o)}>
+        📖 Diário do Herói <span style={{fontSize:11}}>{open?'▲':'▼'}</span>
+      </div>
+      {open && (
+        entries===null ? <div style={{fontSize:11,color:'var(--dim)'}}>Carregando...</div> :
+        entries.length===0 ? <div style={{fontSize:11,color:'var(--dim)'}}>Nenhuma atividade registrada ainda. Entre em combate ou aja em uma missão!</div> :
+        <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:280,overflowY:'auto'}}>
+          {entries.map(e=>{
+            const clean = (e.content||'').split(' ‖ ').join(' — ').replace(/^⚠️\s*/,'')
+            return (
+              <div key={e.id} style={{display:'flex',gap:8,fontSize:11}}>
+                <span style={{flexShrink:0}}>{DIARY_ICONS[e.mode]||'📌'}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{color:'var(--text)',lineHeight:1.4}}>{clean}</div>
+                  <div style={{color:'var(--dim)',fontSize:9,marginTop:1}}>{timeAgo(e.created_at)}</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Fundo temático de acordo com o tipo da Quirk — cada tipo tem um padrão visual próprio
+function quirkTypeBg(type, color){
+  const c = color || '#5C6478'
+  switch(type){
+    case 'Emissor': // rajadas de energia
+      return `repeating-conic-gradient(from 0deg at 100% 0%, ${c}14 0deg 8deg, transparent 8deg 24deg)`
+    case 'Transformação':
+    case 'Acumulação': // ondas orgânicas
+      return `repeating-linear-gradient(135deg, ${c}12 0 6px, transparent 6px 22px)`
+    case 'Mutante': // riscos de velocidade
+      return `repeating-linear-gradient(115deg, ${c}18 0 3px, transparent 3px 26px)`
+    case 'Ferramenta': // grid técnico
+      return `repeating-linear-gradient(0deg, ${c}10 0 1px, transparent 1px 18px), repeating-linear-gradient(90deg, ${c}10 0 1px, transparent 1px 18px)`
+    case 'Composto': // circuito/pontos
+      return `radial-gradient(${c}22 1.4px, transparent 1.4px)`
+    default:
+      return `linear-gradient(160deg, ${c}10, transparent 60%)`
+  }
+}
+
+function AchievementsCard({ char }) {
+  const level = char?.level ?? calcLevel(char?.xp_total ?? char?.xp ?? 0)
+  const { unlocked, total, pct } = computeProgress(char, level)
+  const unlockedIds = new Set(unlocked.map(a=>a.id))
+  return (
+    <div className="card">
+      <div className="card-title">🎖️ Conquistas <span style={{fontSize:10,color:'var(--dim)',fontWeight:400,textTransform:'none',letterSpacing:0}}>{unlocked.length}/{total}</span></div>
+      <div style={{height:5,background:'var(--border)',borderRadius:3,overflow:'hidden',marginBottom:10}}>
+        <div style={{height:'100%',width:`${pct}%`,background:'linear-gradient(90deg,var(--gold-d),var(--gold))',borderRadius:3,transition:'width .3s'}}/>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:6}}>
+        {ACHIEVEMENTS.map(a=>{
+          const on = unlockedIds.has(a.id)
+          return (
+            <div key={a.id} title={`${a.label}${on?'':' (bloqueado)'} — ${a.desc}`}
+              style={{
+                aspectRatio:'1',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:16,cursor:'default',
+                background:on?'linear-gradient(135deg,rgba(242,183,5,.18),rgba(242,183,5,.05))':'var(--panel)',
+                border:`1px solid ${on?'rgba(242,183,5,.4)':'var(--border)'}`,
+                filter:on?'none':'grayscale(1) opacity(.35)',
+                transition:'all .15s',
+              }}>
+              {a.icon}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function FichaView({ onRefreshChar }) {
   const {user, character, refreshCharacter} = useAuth()
   const [showEdit,   setShowEdit]   = useState(false)
@@ -337,7 +431,9 @@ export default function FichaView({ onRefreshChar }) {
       <div className="ficha-grid" style={{display:'grid',gridTemplateColumns:'280px 1fr',gap:12}}>
         {/* LEFT */}
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
-          <div className="card">
+          <AchievementsCard char={char}/>
+          <HeroDiaryCard userId={user.id}/>
+          <div className="card" style={{ backgroundImage: quirkTypeBg(char.quirk_data?.type, QUIRK_TYPE_BONUSES[char.quirk_data?.type]?.color), backgroundBlendMode:'overlay' }}>
             <div className="card-title">👤 Identidade</div>
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
               <Avatar name={char.name} color={char.avatar_color} url={char.avatar_url} size={56}/>

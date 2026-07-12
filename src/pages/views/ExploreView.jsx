@@ -5,6 +5,7 @@ import {
   getMessages, sendMessage, supabase, uploadToBucket,
   getActiveCombatSession, createCombatSession, endCombatSession,
   getCombatants, addCombatant, updateCombatant, applyCombatEffect,
+  applyStatusEffect, removeStatusEffect,
   getCombatActions, addCombatAction,
   getNpcs, getAllProfiles, getQuests, addQuirkXp
 } from '../../lib/supabase'
@@ -15,7 +16,8 @@ import {
   calcDerived, ACTION_TYPES, getActionType,
   calcTechDmg, calcTechQuirkCost, techIsAvailable,
   ROLL_DIFFICULTIES, adaptRollDC, resolveAttributeRoll,
-  ATTR_META, ATTR_KEYS, getMissionType, calcTechQuirkXp
+  ATTR_META, ATTR_KEYS, getMissionType, calcTechQuirkXp,
+  STATUS_EFFECTS, getStatusEffect, isEffectActive
 } from '../../lib/gameSystem'
 
 function rollD(sides){ return Math.floor(Math.random()*sides)+1 }
@@ -23,26 +25,44 @@ function rollD(sides){ return Math.floor(Math.random()*sides)+1 }
 const ACTION_MSG_CLASS = {
   attack:'msg-attack', skill:'msg-skill', defend:'msg-defend',
   dodge:'msg-dodge', heal:'msg-heal', intel:'msg-intel',
-  charisma:'msg-charisma', system:'msg-system', roll:'msg-roll',
+  charisma:'msg-charisma', system:'msg-system', roll:'msg-roll', event:'msg-event',
 }
 // Color used only as a small indicator (left border) on the roll mini-card — not full text coloring.
 const ACTION_COLOR = {
   attack:'var(--red-l)', skill:'var(--purple-l)', defend:'var(--blue-l)',
   dodge:'var(--teal-l)', take:'var(--red-l)', heal:'var(--green-l)',
   intel:'var(--gold)', charisma:'var(--pink-l)', roll:'var(--blue-l)',
+  event:'var(--gold)',
 }
+const EVENT_PRESETS = [
+  '🌧️ O tempo muda de repente — uma chuva forte começa a cair.',
+  '📢 Um alarme da cidade dispara ao longe.',
+  '👥 Um pequeno grupo de civis passa correndo, assustado.',
+  '📰 Uma notícia urgente aparece nas telas públicas ao redor.',
+  '💡 As luzes piscam por um instante, sem motivo aparente.',
+  '🚁 Um helicóptero de heróis sobrevoa a área.',
+  '🐦 Um silêncio estranho toma conta do local — os pássaros pararam de cantar.',
+]
 const RESPOND_LABELS = { dodge:'💨 Desviar', defend:'🛡️ Defender', take:'💥 Absorver', ack:'✅ Reagir' }
+// Highlights @Nome mentions in a piece of text (blue pill, like Discord)
+function withMentions(text) {
+  if (!text || typeof text !== 'string' || !text.includes('@')) return text
+  const parts = text.split(/(@[\p{L}0-9_]+(?:\s[\p{L}0-9_]+)?)/gu)
+  return parts.map((p,i) => p.startsWith('@') && p.length>1
+    ? <span key={i} style={{ color:'var(--blue-l)', fontWeight:700, background:'rgba(59,111,240,.15)', borderRadius:3, padding:'0 3px' }}>{p}</span>
+    : p)
+}
 // Separates the "mechanical" roll/result part of an action message from the
 // narrative flavor text. Narrative comes first (normal text), then a small
 // mini-card with the roll mechanics at the end, colored only as an indicator.
 const MECH_SEP = ' ‖ '
 function ActionMessageText({ content, color }) {
-  if (!content?.includes(MECH_SEP)) return content
+  if (!content?.includes(MECH_SEP)) return withMentions(content)
   const [mech, ...rest] = content.split(MECH_SEP)
   const narrative = rest.join(MECH_SEP)
   return (
     <>
-      {narrative && <div style={{ color:'var(--text)', fontSize:13, lineHeight:1.5, marginBottom:6 }}>{narrative}</div>}
+      {narrative && <div style={{ color:'var(--text)', fontSize:13, lineHeight:1.5, marginBottom:6 }}>{withMentions(narrative)}</div>}
       <div style={{
         display:'inline-flex', alignItems:'center', gap:6,
         padding:'4px 9px', borderRadius:5, background:'rgba(255,255,255,.03)',
@@ -60,10 +80,67 @@ function ActionMessageText({ content, color }) {
 // ─────────────────────────────────────────────
 // COMBAT PANEL (shared between desktop side + mobile overlay)
 // ─────────────────────────────────────────────
+function HpBar({ hp, hpMax, hpColor }) {
+  const pct = hpMax > 0 ? Math.min(100, Math.round(hp/hpMax*100)) : 100
+  const [trailPct, setTrailPct] = useState(pct)
+  const prevRef = useRef(pct)
+  useEffect(() => {
+    if (pct < prevRef.current) {
+      setTrailPct(prevRef.current)
+      const t = setTimeout(()=>setTrailPct(pct), 550)
+      prevRef.current = pct
+      return ()=>clearTimeout(t)
+    }
+    prevRef.current = pct
+    setTrailPct(pct)
+  }, [pct])
+  return (
+    <div className="hp-mini" style={{position:'relative',overflow:'hidden'}}>
+      <div style={{position:'absolute',inset:0,background:'var(--red-l)',opacity:.55,width:`${trailPct}%`,transition:'width .6s ease .1s'}}/>
+      <div className="hp-mini-fill" style={{width:`${pct}%`,background:hpColor,position:'relative',transition:'width .2s'}}/>
+    </div>
+  )
+}
+
+function StatusEffectRow({ combatant, canEdit, onApply, onRemove }) {
+  const [picking, setPicking] = useState(false)
+  const active = (combatant.status_effects||[]).filter(isEffectActive)
+  if (!canEdit && active.length===0) return null
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:3, marginTop:2, position:'relative', flexWrap:'wrap' }}>
+      {active.map(e => {
+        const meta = getStatusEffect(e.key)
+        if (!meta) return null
+        return (
+          <span key={e.key} title={`${meta.label} — clique pra remover`}
+            onClick={ev=>{ ev.stopPropagation(); canEdit && onRemove(combatant.id, e.key) }}
+            style={{ fontSize:9, cursor:canEdit?'pointer':'default', background:`${meta.color}22`, border:`1px solid ${meta.color}55`, borderRadius:3, padding:'0 3px' }}>
+            {meta.icon}
+          </span>
+        )
+      })}
+      {canEdit && (
+        <span onClick={ev=>{ ev.stopPropagation(); setPicking(p=>!p) }}
+          style={{ fontSize:9, cursor:'pointer', color:'var(--dim)', border:'1px dashed var(--border)', borderRadius:3, padding:'0 3px' }}>+</span>
+      )}
+      {picking && (
+        <div onClick={ev=>ev.stopPropagation()} style={{ position:'absolute', top:16, left:0, zIndex:50, background:'var(--panel)', border:'1px solid var(--border)', borderRadius:6, padding:4, display:'flex', flexWrap:'wrap', gap:3, width:120, boxShadow:'0 4px 16px rgba(0,0,0,.5)' }}>
+          {STATUS_EFFECTS.map(s=>(
+            <span key={s.key} title={s.label} onClick={()=>{ onApply(combatant.id, s.key); setPicking(false) }}
+              style={{ fontSize:13, cursor:'pointer', padding:2, borderRadius:4 }}
+              onMouseEnter={e=>e.currentTarget.style.background='var(--surface)'}
+              onMouseLeave={e=>e.currentTarget.style.background='transparent'}>{s.icon}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
   actionMode, setActionMode, charSkills, showSkillMenu, setShowSkillMenu,
   declareAction, setShowCombatSetup, user, activeNpc, hpColor, getActionType, session, isMobile,
-  pendingActions, respondMode, onArmRespond, discoveredInfo }) {
+  pendingActions, respondMode, onArmRespond, discoveredInfo, onApplyStatus, onRemoveStatus }) {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
@@ -108,9 +185,10 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
                   {isMe && <span style={{ color:'var(--blue-l)', fontSize:8, marginLeft:3 }}>(você)</span>}
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:2 }}>
-                  <div className="hp-mini"><div className="hp-mini-fill" style={{ width:`${hpPct}%`, background:hpColor(hpPct) }}/></div>
+                  <HpBar hp={cb.hp} hpMax={cb.hp_max} hpColor={hpColor(hpPct)}/>
                   <span style={{ fontFamily:'Orbitron,monospace', fontSize:8, color:hpColor(hpPct), flexShrink:0 }}>{cb.hp}/{cb.hp_max}</span>
                 </div>
+                <StatusEffectRow combatant={cb} canEdit={!!myChar} onApply={onApplyStatus} onRemove={onRemoveStatus}/>
               </div>
               {!cb.is_alive && <span style={{ fontSize:10 }}>💀</span>}
             </div>
@@ -245,6 +323,33 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
 // FREE ROLL MODAL — roll de atributo fora de combate
 // Narrador pode solicitar, qualquer um pode rolar
 // ─────────────────────────────────────────────
+function EventModal({ onClose, onTrigger }) {
+  const [custom, setCustom] = useState('')
+  return (
+    <Modal title="🌪️ Evento Ambiental" onClose={onClose} maxWidth={440}>
+      <div style={{ fontSize:11, color:'var(--muted)', marginBottom:10 }}>
+        Dispara um evento rápido no chat do local — sem precisar de missão ou combate. Bom pra dar vida à cena.
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:14 }}>
+        {EVENT_PRESETS.map((e,i)=>(
+          <button key={i} className="btn btn-g" style={{ justifyContent:'flex-start', textAlign:'left', fontWeight:400, textTransform:'none', letterSpacing:0, fontSize:12, padding:'8px 10px' }}
+            onClick={()=>onTrigger(e)}>
+            {e}
+          </button>
+        ))}
+      </div>
+      <div className="field">
+        <label>Ou escreva o seu:</label>
+        <textarea className="input" rows={2} value={custom} onChange={e=>setCustom(e.target.value)} placeholder="Ex: Um estrondo distante sacode as janelas..."/>
+      </div>
+      <div style={{ display:'flex', gap:6 }}>
+        <button className="btn btn-gold btn-lg" style={{ flex:1 }} disabled={!custom.trim()} onClick={()=>onTrigger(custom.trim())}>🌪️ Disparar</button>
+        <button className="btn btn-g" onClick={onClose}>Cancelar</button>
+      </div>
+    </Modal>
+  )
+}
+
 function FreeRollModal({ char, attrs, npcs, combatants, missionDifficulty, onClose, onRolled }) {
   const [form, setForm] = useState({
     attrKey:    'inteligencia',
@@ -373,14 +478,65 @@ function FreeRollModal({ char, attrs, npcs, combatants, missionDifficulty, onClo
 // ─────────────────────────────────────────────
 // LOCATIONS GRID
 // ─────────────────────────────────────────────
+// Posição determinística (não-aleatória de verdade, mas estável) derivada do id do local
+function hashPos(id){
+  let h=0
+  for(let i=0;i<id.length;i++){ h=(h*31+id.charCodeAt(i))>>>0 }
+  const x = 12 + (h%76)
+  const y = 12 + ((h>>8)%76)
+  return { x, y }
+}
+
+function LocationsMap({ locations, onSelect }) {
+  return (
+    <div style={{
+      position:'relative', width:'100%', aspectRatio:'16/9', minHeight:280,
+      background:'repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 34px), repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 1px, transparent 1px 34px), radial-gradient(circle at 30% 20%, rgba(59,111,240,.08), transparent 55%), var(--panel)',
+      border:'1px solid var(--border)', borderRadius:12, overflow:'hidden', marginBottom:16,
+    }}>
+      {locations.map(loc=>{
+        const { x, y } = hashPos(loc.id)
+        return (
+          <div key={loc.id} onClick={()=>onSelect(loc)} title={loc.name}
+            style={{ position:'absolute', left:`${x}%`, top:`${y}%`, transform:'translate(-50%,-50%)', cursor:'pointer', textAlign:'center', zIndex: loc.is_combat?5:1 }}>
+            <div style={{
+              width:34, height:34, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16,
+              background: loc.is_combat ? 'rgba(229,72,77,.25)' : 'var(--card)',
+              border:`2px solid ${loc.is_combat?'var(--red)':loc.pinned?'var(--gold)':'var(--blue)'}`,
+              boxShadow: loc.is_combat ? '0 0 14px rgba(229,72,77,.6)' : '0 2px 8px rgba(0,0,0,.4)',
+              animation: loc.is_combat ? 'pendingPulse 1.6s ease infinite' : 'none',
+            }}>
+              {loc.icon||'🗺️'}
+            </div>
+            <div style={{ fontSize:9, fontWeight:700, color:'var(--text-h)', marginTop:3, background:'rgba(0,0,0,.55)', padding:'1px 5px', borderRadius:3, whiteSpace:'nowrap', maxWidth:90, overflow:'hidden', textOverflow:'ellipsis' }}>
+              {loc.name}
+            </div>
+          </div>
+        )
+      })}
+      {locations.length===0 && (
+        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--dim)', fontSize:12 }}>
+          Nenhum local no mapa ainda.
+        </div>
+      )}
+    </div>
+  )
+}
+
 function LocationsGrid({ locations, onSelect, onAdd, onEdit, onDelete }) {
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('loc-view-mode') || 'list')
+  function setMode(m){ setViewMode(m); localStorage.setItem('loc-view-mode', m) }
   const sorted = [...locations.filter(l=>l.pinned), ...locations.filter(l=>!l.pinned)]
   return (
     <div style={{ flex:1, overflowY:'auto', padding:14 }}>
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16, flexWrap:'wrap' }}>
         <div style={{ fontFamily:'Bangers,cursive', fontSize:20, letterSpacing:3, color:'var(--text-h)' }}>🗺️ LOCAIS</div>
         <div style={{ fontSize:11, color:'var(--muted)' }}>{locations.length} locais</div>
-        <button className="btn btn-p btn-sm" style={{ marginLeft:'auto' }} onClick={onAdd}>+ Novo Local</button>
+        <div style={{ display:'flex', gap:4, marginLeft:'auto' }}>
+          <button className="btn btn-sm" onClick={()=>setMode('list')} style={{ background:viewMode==='list'?'var(--blue)':'transparent', color:viewMode==='list'?'#fff':'var(--muted)', border:'1px solid var(--border)' }}>📋 Lista</button>
+          <button className="btn btn-sm" onClick={()=>setMode('map')} style={{ background:viewMode==='map'?'var(--blue)':'transparent', color:viewMode==='map'?'#fff':'var(--muted)', border:'1px solid var(--border)' }}>🗺️ Mapa</button>
+        </div>
+        <button className="btn btn-p btn-sm" onClick={onAdd}>+ Novo Local</button>
       </div>
       {locations.length===0 && (
         <div style={{ textAlign:'center', padding:40, color:'var(--muted)' }}>
@@ -389,6 +545,7 @@ function LocationsGrid({ locations, onSelect, onAdd, onEdit, onDelete }) {
           <button className="btn btn-p btn-lg" onClick={onAdd}>+ Criar Primeiro Local</button>
         </div>
       )}
+      {viewMode==='map' && locations.length>0 && <LocationsMap locations={sorted} onSelect={onSelect}/>}
       <div className="loc-news-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14 }}>
         {sorted.map(loc=>(
           <div key={loc.id} className="loc-news-card" onClick={()=>onSelect(loc)}>
@@ -752,6 +909,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
   const [actionMode,   setActionMode]   = useState(null)
   const [respondMode,  setRespondMode]  = useState(null) // {type, action} — reacting to a pending action, typed in the main chat box
   const [session,      setSession]      = useState(null)
+  const [combatFlash,  setCombatFlash]  = useState(false)
+  const prevSessionRef = useRef(null)
   const [combatants,   setCombatants]   = useState([])
   const [combatLog,    setCombatLog]    = useState([])
   const [pendingActions, setPendingActions] = useState([])
@@ -766,9 +925,13 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
   const [showSkillMenu,     setShowSkillMenu]     = useState(false)
   const [showDeclareModal,  setShowDeclareModal]  = useState(false)
   const [showRollModal,     setShowRollModal]     = useState(false)
+  const [showEventModal,    setShowEventModal]    = useState(false)
   const [discoveredInfo,    setDiscoveredInfo]    = useState([])  // intel results in this session
   const endRef    = useRef(null)
   const subRefs   = useRef([])
+  const skillStreakRef = useRef({}) // combatantId -> consecutive skill uses (fadiga da quirk)
+  const lastSkillUseRef = useRef(null) // {actorId, ts} — combo de equipe
+  const [showMentions, setShowMentions] = useState(false)
   const char = character
 
   async function load() {
@@ -866,6 +1029,15 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
   }
 
   // ── Resolve a pending action (individual per target)
+  async function handleApplyStatus(combatantId, effectKey) {
+    await applyStatusEffect(combatantId, effectKey)
+    load()
+  }
+  async function handleRemoveStatus(combatantId, effectKey) {
+    await removeStatusEffect(combatantId, effectKey)
+    load()
+  }
+
   async function respondToPending(responseType, pendingAction, customNarrative='') {
     const me = getMyCombatant()
     if (!me) { notify('Você não está no combate','error'); return }
@@ -1040,10 +1212,21 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
 
     const dc = Math.max(5, roll + Math.floor(attrV/3) + (isCrit?5:0))
     const techDmg = skill ? calcTechDmg(skill,me.attrs,me.quirk_data?.type||'',1) : 0
-    const bonusDmg = isCrit ? techDmg*2 : techDmg
+
+    // Fadiga da Quirk: usar técnicas seguidas sem intervalo reduz a eficácia
+    let fatigued = false
+    if (skill) {
+      const streak = (skillStreakRef.current[me.id]||0) + 1
+      skillStreakRef.current[me.id] = streak
+      if (streak >= 3) fatigued = true
+    } else {
+      skillStreakRef.current[me.id] = 0
+    }
+    const fatigueMult = fatigued ? 0.6 : 1
+    const bonusDmg = Math.round((isCrit ? techDmg*2 : techDmg) * fatigueMult)
     const mech = isCrit ? `💥 CRÍTICO! D20=${roll}+${ATTR_META[at.attr]?.label}=${attrV} (DC${dc})`
       : `${at.label.split(' ')[0]} D20=${roll}+${ATTR_META[at.attr]?.label}=${attrV} (DC${dc})`
-    const auto = `${me.character_name} ataca ${target.character_name}${skill?` com ${skill.name}`:''}! Aguardando reação...`
+    const auto = `${me.character_name} ataca ${target.character_name}${skill?` com ${skill.name}`:''}!${fatigued?' ⚡ (fadiga da quirk — eficácia reduzida)':''} Aguardando reação...`
     const desc = `${mech}${MECH_SEP}${customNarrative||auto}`
 
     await addCombatAction({
@@ -1075,6 +1258,20 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
       author_avatar_url:avatar,
     })
 
+    // Combo de Equipe: dois aliados diferentes usando técnicas em sequência rápida
+    if (skill && me.type !== 'villain') {
+      const last = lastSkillUseRef.current
+      const now = Date.now()
+      if (last && last.actorId !== me.id && last.type !== 'villain' && (now - last.ts) < 30000) {
+        const comboDesc = `🤝 COMBO EM EQUIPE${MECH_SEP}${me.character_name} e ${last.name} conectaram técnicas em sequência — bônus de sinergia!`
+        await sendMessage({ location_id:loc.id, user_id:user.id, author_name:'Sistema', author_color:'gold', author_alias:'', content:comboDesc, mode:'system', npc_id:null })
+        if (!activeNpc && user?.id) await addQuirkXp(user.id, 8)
+        lastSkillUseRef.current = null
+      } else {
+        lastSkillUseRef.current = { actorId:me.id, name:me.character_name, type:me.type, ts:now }
+      }
+    }
+
     setText(''); setTargetId(null); setActionMode(null); setShowSkillMenu(false); load()
   }
 
@@ -1083,6 +1280,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
     const me = getMyCombatant()
     if (!me) { notify('Você não está no combate','error'); return }
     if (!targetId&&['heal'].includes(actionKey)) { notify('Selecione um alvo','error'); return }
+    skillStreakRef.current[me.id] = 0 // ações fora de técnica quebram a fadiga da quirk
     const target  = targetId ? combatants.find(c=>c.id===targetId) : me
     const roll    = rollD(20)
     const customNarrative = text.trim()
@@ -1273,6 +1471,9 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'calc(100dvh - 48px)', overflow:'hidden' }}>
+      {combatFlash && (
+        <div style={{ position:'fixed', inset:0, zIndex:2000, pointerEvents:'none', background:'var(--red)', animation:'combatFlash .7s ease-out forwards' }}/>
+      )}
       {/* Banner */}
       <div style={{ position:'relative', height:88, flexShrink:0, overflow:'hidden', borderBottom:'1px solid var(--border)' }}>
         {loc.background_url&&<img src={loc.background_url} alt="" style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(4px) brightness(.35)',transform:'scale(1.05)' }}/>}
@@ -1294,6 +1495,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             )}
             <button className="btn btn-sm" style={{ background:'rgba(242,183,5,.12)',color:'var(--gold)',border:'1px solid rgba(242,183,5,.3)' }}
               onClick={()=>setShowRollModal(true)}>🎲 Rolar</button>
+            <button className="btn btn-sm" style={{ background:'rgba(242,183,5,.12)',color:'var(--gold)',border:'1px solid rgba(242,183,5,.3)' }}
+              onClick={()=>setShowEventModal(true)} title="Disparar evento ambiental">🌪️ Evento</button>
             <button className="btn btn-g btn-sm" style={{ color:activeNpc?'var(--gold)':'var(--muted)',borderColor:activeNpc?'rgba(242,183,5,.4)':'var(--border)' }}
               onClick={()=>setShowNpcPicker(true)}>🎭 {activeNpc?activeNpc.name.slice(0,7):'NPC'}</button>
           </div>
@@ -1373,6 +1576,30 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
             </div>
           )}
 
+          {/* Mention autocomplete */}
+          {showMentions && (() => {
+            const atIdx = text.lastIndexOf('@')
+            if (atIdx === -1) return null
+            const query = text.slice(atIdx+1).toLowerCase()
+            if (query.includes(' ')) return null
+            const names = [
+              ...allProfiles.filter(p=>p.characters?.[0]?.name).map(p=>p.characters[0].name),
+              ...npcs.filter(n=>n.name).map(n=>n.name),
+            ]
+            const matches = [...new Set(names)].filter(n=>n.toLowerCase().includes(query)).slice(0,6)
+            if (matches.length===0) return null
+            return (
+              <div style={{ padding:'6px 10px', background:'var(--panel)', borderTop:'1px solid var(--border)', display:'flex', gap:6, flexWrap:'wrap', flexShrink:0 }}>
+                {matches.map(n=>(
+                  <span key={n} onClick={()=>{ setText(text.slice(0,atIdx)+'@'+n+' '); setShowMentions(false) }}
+                    style={{ fontSize:11, fontWeight:700, color:'var(--blue-l)', background:'rgba(59,111,240,.12)', border:'1px solid rgba(59,111,240,.3)', borderRadius:5, padding:'3px 9px', cursor:'pointer' }}>
+                    @{n}
+                  </span>
+                ))}
+              </div>
+            )
+          })()}
+
           {/* ── INPUT — sem tabs de ação ── */}
           <div className="chat-input-body" style={{ borderTop:'1px solid var(--border)',padding:'8px 10px' }}>
             {session && (
@@ -1384,9 +1611,10 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
               >⚔️</button>
             )}
             <textarea className="chat-textarea" rows={1} value={text}
-              onChange={e=>setText(e.target.value)}
+              onChange={e=>{ setText(e.target.value); setShowMentions(e.target.value.includes('@')) }}
               onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey){
                 e.preventDefault()
+                setShowMentions(false)
                 if(respondMode){ respondToPending(respondMode.type,respondMode.action,text); setRespondMode(null); setText('') }
                 else if(actionMode==='attack'){ declareAttack() }
                 else if(actionMode){ declareAction(actionMode) }
@@ -1396,7 +1624,7 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                 ? `${RESPOND_LABELS[respondMode.type]||'🎲 Reagir'} — descreva e envie...`
                 : actionMode
                   ? `${getActionType(actionMode)?.label} — descreva e envie...`
-                  : activeNpc?`Como ${activeNpc.name}...`:`Chat em ${loc.name}...`}
+                  : activeNpc?`Como ${activeNpc.name}...`:`Chat em ${loc.name}... (@ pra mencionar)`}
               style={{ border: respondMode ? '1px solid var(--red)' : actionMode ? `1px solid ${getActionType(actionMode)?.color||'var(--border)'}` : undefined }}
             />
             <button className="chat-send"
@@ -1428,6 +1656,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                 respondMode={respondMode}
                 onArmRespond={(type,pa)=>setRespondMode({type,action:pa})}
                 discoveredInfo={discoveredInfo}
+                onApplyStatus={handleApplyStatus}
+                onRemoveStatus={handleRemoveStatus}
               />
             </div>
 
@@ -1453,6 +1683,8 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
                       respondMode={respondMode}
                       onArmRespond={(type,pa)=>{ setRespondMode({type,action:pa}); setShowSkillMenu(false) }}
                       discoveredInfo={discoveredInfo}
+                      onApplyStatus={handleApplyStatus}
+                      onRemoveStatus={handleRemoveStatus}
                     />
                   </div>
                 </div>
@@ -1583,6 +1815,22 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
         />
       )}
 
+      {showEventModal && (
+        <EventModal
+          onClose={()=>setShowEventModal(false)}
+          onTrigger={async (eventText)=>{
+            const desc = `🌪️ EVENTO${MECH_SEP}${eventText}`
+            await sendMessage({
+              location_id: loc.id, user_id: user.id,
+              author_name: 'Narrador', author_alias: '',
+              author_color: 'gold', content: desc,
+              mode: 'event', npc_id: null,
+              author_avatar_url: null,
+            })
+            setShowEventModal(false)
+          }}
+        />
+      )}
       {showNpcPicker&&(
         <Modal title="🎭 Vestir NPC" onClose={()=>setShowNpcPicker(false)} maxWidth={400}>
           <div style={{ fontSize:11,color:'var(--muted)',marginBottom:12 }}>Suas mensagens e ações serão executadas como o NPC.</div>
@@ -1654,6 +1902,16 @@ export default function ExploreView() {
   const [editLoc,setEditLoc]=useState(null)
   async function load(){const{data}=await getLocations();if(data)setLocations(data)}
   useEffect(()=>{load()},[])
+  useEffect(()=>{
+    const wasActive = !!prevSessionRef.current
+    if (session && !wasActive) {
+      setCombatFlash(true)
+      const t = setTimeout(()=>setCombatFlash(false), 700)
+      prevSessionRef.current = session
+      return ()=>clearTimeout(t)
+    }
+    prevSessionRef.current = session
+  },[session])
   async function handleDelete(loc){if(!confirm(`Remover "${loc.name}"?`))return;await deleteLocation(loc.id);notify('🗑️ Removido');load()}
   if(currentLoc) return <LocationChat loc={currentLoc} onBack={()=>{setCurrentLoc(null);load()}} onRefreshLocs={load}/>
   return(<><LocationsGrid locations={locations} onSelect={setCurrentLoc} onAdd={()=>{setEditLoc(null);setShowModal(true)}} onEdit={loc=>{setEditLoc(loc);setShowModal(true)}} onDelete={handleDelete}/>{showModal&&<LocationModal loc={editLoc} onClose={()=>{setShowModal(false);setEditLoc(null)}} onSaved={()=>{load();setShowModal(false);setEditLoc(null)}}/>}</>)

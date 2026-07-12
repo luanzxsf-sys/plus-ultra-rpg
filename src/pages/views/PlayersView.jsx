@@ -3,6 +3,7 @@ import { getAllProfiles, supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import Avatar from '../../components/Avatar'
 import { gradeLabel, gradeColor, calcLevel, ATTR_META, ATTR_KEYS, QUIRK_TYPE_BONUSES, getSpecialty, calcAttrsWithSpecialty } from '../../lib/gameSystem'
+import { computeProgress } from '../../lib/achievements'
 
 // ── PROFILE DETAIL MODAL ──────────────────────────────────────
 function PlayerDetailModal({ p, onClose, isMe }) {
@@ -17,21 +18,33 @@ function PlayerDetailModal({ p, onClose, isMe }) {
       <div className="modal" style={{ maxWidth:500 }}>
         <div className="modal-hdr">
           <div className="modal-title">👤 @{p.username}</div>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+            <button className="btn btn-g btn-sm" onClick={()=>{
+              const summary = `🪪 LICENÇA DE HERÓI\n${char?.name||p.username}${char?.alias?` "${char.alias}"`:''}\nNível ${level}${char?.specialty?` · ${getSpecialty(char.specialty)?.label}`:''}${char?.quirk_data?.name?`\nQuirk: ${char.quirk_data.name}`:''}`
+              navigator.clipboard?.writeText(summary)
+            }} title="Copiar cartão">📋 Copiar</button>
+            <button className="modal-close" onClick={onClose}>✕</button>
+          </div>
         </div>
 
-        {/* Header */}
-        <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:16, padding:'12px 14px', background:'var(--panel)', borderRadius:8, border:'1px solid var(--border)' }}>
-          <div style={{ position:'relative' }}>
-            <Avatar name={char?.name || p.username} color={char?.avatar_color || 'purple'} url={char?.avatar_url || p.avatar_url} size={64} />
-            <div style={{ position:'absolute', bottom:2, right:2, width:12, height:12, borderRadius:'50%', background:p.is_online?'var(--green)':'var(--dim)', border:'2px solid var(--panel)' }} />
+        {/* Header — cartão de licença de herói */}
+        <div style={{ position:'relative', marginBottom:16, padding:'14px 14px 12px', background:'linear-gradient(135deg, var(--panel), var(--surface))', borderRadius:10, border:'1px solid rgba(242,183,5,.35)', overflow:'hidden' }}>
+          <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:'linear-gradient(90deg,var(--blue),var(--gold))' }}/>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+            <span style={{ fontSize:8, letterSpacing:2, color:'var(--gold)', fontWeight:700, textTransform:'uppercase' }}>🪪 Licença de Herói</span>
+            <span style={{ fontFamily:'Orbitron,monospace', fontSize:8, color:'var(--dim)' }}>ID-{(p.id||'').slice(0,8).toUpperCase()}</span>
           </div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontFamily:'Bangers,cursive', fontSize:22, letterSpacing:1, color:'var(--text-h)' }}>{char?.name || p.username}</div>
-            {char?.alias && <div style={{ fontSize:10, color:'var(--gold)', letterSpacing:2 }}>"{char.alias}"</div>}
-            <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>
-              @{p.username} {isMe && <span style={{ color:'var(--purple-l)' }}>· (você)</span>}
+          <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+            <div style={{ position:'relative' }}>
+              <Avatar name={char?.name || p.username} color={char?.avatar_color || 'purple'} url={char?.avatar_url || p.avatar_url} size={64} />
+              <div style={{ position:'absolute', bottom:2, right:2, width:12, height:12, borderRadius:'50%', background:p.is_online?'var(--green)':'var(--dim)', border:'2px solid var(--panel)' }} />
             </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontFamily:'Bangers,cursive', fontSize:22, letterSpacing:1, color:'var(--text-h)' }}>{char?.name || p.username}</div>
+              {char?.alias && <div style={{ fontSize:10, color:'var(--gold)', letterSpacing:2 }}>"{char.alias}"</div>}
+              <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>
+                @{p.username} {isMe && <span style={{ color:'var(--purple-l)' }}>· (você)</span>}
+              </div>
             <div style={{ display:'flex', gap:6, alignItems:'center', marginTop:4, flexWrap:'wrap' }}>
               <div style={{ fontFamily:'Orbitron,monospace', fontSize:11, fontWeight:700, color:'var(--gold)', background:'rgba(242,183,5,.1)', padding:'2px 8px', borderRadius:3 }}>
                 Nv. {level}
@@ -41,6 +54,7 @@ function PlayerDetailModal({ p, onClose, isMe }) {
               </div>
             </div>
           </div>
+        </div>
         </div>
 
         {char?.name ? (
@@ -118,6 +132,17 @@ function PlayerDetailModal({ p, onClose, isMe }) {
                 })}
               </div>
             )}
+
+            {/* Achievements summary */}
+            {(() => { const { unlocked, total } = computeProgress(char, level); return (
+              <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:12, padding:'6px 10px', background:'rgba(242,183,5,.06)', border:'1px solid rgba(242,183,5,.2)', borderRadius:7 }}>
+                <span style={{ fontSize:14 }}>🎖️</span>
+                <span style={{ fontSize:10, color:'var(--gold)', fontWeight:700 }}>{unlocked.length}/{total} conquistas</span>
+                <div style={{ display:'flex', gap:2, marginLeft:'auto' }}>
+                  {unlocked.slice(0,6).map(a=><span key={a.id} title={a.label} style={{fontSize:12}}>{a.icon}</span>)}
+                </div>
+              </div>
+            )})()}
 
             {/* Quirk */}
             {char.quirk_data?.name && (

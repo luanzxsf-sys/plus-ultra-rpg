@@ -45,8 +45,13 @@ export default function AppShell() {
   const [questCount, setQuestCount]   = useState(0)
   const [onlineCount, setOnlineCount] = useState(1)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === '1')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef(null)
+
+  function toggleCollapsed() {
+    setCollapsed(c => { localStorage.setItem('sidebar-collapsed', c ? '0' : '1'); return !c })
+  }
 
   const char  = character
   const theme = profile?.theme || 'dark'
@@ -120,21 +125,26 @@ export default function AppShell() {
     <div className="app">
       <div className={`sidebar-overlay ${sidebarOpen?'show':''}`} onClick={() => setSidebarOpen(false)} />
 
-      <div className={`sidebar ${sidebarOpen?'open':''}`}>
+      <div className={`sidebar ${sidebarOpen?'open':''} ${collapsed?'collapsed':''}`}>
+        <button className="sidebar-collapse-btn" onClick={toggleCollapsed} title={collapsed?'Expandir menu':'Recolher menu'}>
+          {collapsed?'»':'«'}
+        </button>
         <div className="logo">
-          <div className="logo-title">PLUS ULTRA</div>
-          <div className="logo-sub">Hero RPG Platform</div>
-          <div className="logo-badge">{serverName}</div>
+          <div className="logo-title">{collapsed?'PU':'PLUS ULTRA'}</div>
+          {!collapsed && <>
+            <div className="logo-sub">Hero RPG Platform</div>
+            <div className="logo-badge">{serverName}</div>
+          </>}
         </div>
 
         <nav className="nav">
           {CATS.map(cat => (
             <div key={cat}>
-              <div className="nav-cat">{cat}</div>
+              {!collapsed && <div className="nav-cat">{cat}</div>}
               {VIEWS.filter(v => v.cat === cat).map(v => (
-                <div key={v.id} className={`nav-item ${view===v.id?'active':''}`} onClick={() => navigate(v.id)}>
+                <div key={v.id} className={`nav-item ${view===v.id?'active':''} ${collapsed?'collapsed':''}`} onClick={() => navigate(v.id)} title={collapsed?v.label:''}>
                   <span className="ico">{v.ico}</span>
-                  {v.label}
+                  {!collapsed && v.label}
                   {v.badge && questCount > 0 && <span className="nbadge">{questCount}</span>}
                 </div>
               ))}
@@ -144,6 +154,14 @@ export default function AppShell() {
 
         {/* User card */}
         <div className="user-slot" ref={userMenuRef}>
+          {collapsed ? (
+            <div style={{ display:'flex', justifyContent:'center', padding:'8px 0' }}>
+              <div style={{ position:'relative', cursor:'pointer' }} onClick={() => setUserMenuOpen(m => !m)} title={char?.name||profile?.username||'Herói'}>
+                <Avatar name={char?.name||profile?.username||'?'} color={char?.avatar_color||'purple'} url={char?.avatar_url||profile?.avatar_url} size={34} />
+                <div style={{ position:'absolute', bottom:0, right:0, width:9, height:9, borderRadius:'50%', background:'var(--green)', border:'1.5px solid var(--card)' }} />
+              </div>
+            </div>
+          ) : (
           <div className="u-card">
             <div className="u-row">
               <div style={{ position:'relative', cursor:'pointer' }} onClick={() => setUserMenuOpen(m => !m)}>
@@ -162,7 +180,7 @@ export default function AppShell() {
             <div className="xp-bar"><div className="xp-fill" style={{ width:`${xpPct}%` }} /></div>
             <div className="xp-lbl"><span>EXP</span><span>{char?.xp||0} / {char?.xp_max||1000}</span></div>
           </div>
-
+          )}
           {userMenuOpen && (
             <div style={{ position:'absolute', bottom:80, left:10, width:190, background:'var(--panel)', border:'1px solid var(--border)', borderRadius:8, padding:6, zIndex:400, boxShadow:'0 4px 20px rgba(0,0,0,.6)' }}>
               <div style={{ padding:'4px 8px', fontSize:11, color:'var(--dim)', borderBottom:'1px solid var(--border)', marginBottom:4 }}>
@@ -175,7 +193,7 @@ export default function AppShell() {
               <div style={{ padding:'7px 8px', borderTop:'1px solid var(--border)', marginTop:4 }}>
                 <div style={{ fontSize:9, color:'var(--dim)', marginBottom:5, textTransform:'uppercase', letterSpacing:1 }}>Tema</div>
                 <div style={{ display:'flex', gap:5 }}>
-                  {[{k:'dark',l:'🌑',tip:'Escuro'},{k:'blue',l:'🌊',tip:'Azul'},{k:'light',l:'☀️',tip:'Claro'}].map(t => (
+                  {[{k:'dark',l:'🌑',tip:'Escuro'},{k:'blue',l:'🌊',tip:'Azul'},{k:'light',l:'☀️',tip:'Claro'},{k:'night',l:'🌃',tip:'Patrulha Noturna'}].map(t => (
                     <button key={t.k} title={t.tip} onClick={() => handleThemeChange(t.k)}
                       style={{ flex:1, padding:'5px 2px', border:`1px solid ${theme===t.k?'var(--blue)':'var(--border)'}`, borderRadius:4, background:theme===t.k?'rgba(59,111,240,.2)':'transparent', cursor:'pointer', fontSize:14 }}>
                       {t.l}

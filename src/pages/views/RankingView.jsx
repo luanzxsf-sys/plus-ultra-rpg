@@ -7,6 +7,15 @@ import Avatar from '../../components/Avatar'
 import { calcLevel } from '../../lib/gameSystem'
 
 const RANK_COLORS = { S:'#ff79c6','S+':'#ff40ff','SS':'#FF79C6','SS+':'#FF69B4','SSS':'#FF40FF','SSS+':'#FF00FF',A:'#A78BFA','A+':'#9B59B6',B:'#7289DA','B+':'#5865F2',C:'#57F287','C+':'#3BA55D',D:'#FFA500','D+':'#FF8C00',E:'#96989D',F:'#72767D' }
+function rankIcon(badge){
+  if(!badge) return null
+  const key=badge.trim().toUpperCase()
+  if(key.startsWith('S')) return '👑'
+  if(key.startsWith('A')) return '🏅'
+  if(key.startsWith('B')) return '🎖️'
+  if(key.startsWith('C')) return '🥉'
+  return '📛'
+}
 const DEPARTMENTS = { heroes:{ label:'🦸 Heróis', color:'var(--gold)' }, investigative:{ label:'🔎 Depto. Investigativo', color:'var(--blue-l)' } }
 
 function RankModal({ entry, onClose, onSaved, userId }) {
@@ -17,10 +26,10 @@ function RankModal({ entry, onClose, onSaved, userId }) {
   function set(k,v){setForm(f=>({...f,[k]:v}))}
 
   useEffect(()=>{
-    getAllProfiles().then(({data})=>{ if(data) setProfiles(data.filter(p=>p.name)) })
+    getAllProfiles().then(({data})=>{ if(data) setProfiles(data.filter(p=>p.characters?.[0]?.name)) })
   },[])
 
-  const selected = profiles.find(p=>p.user_id===selectedUserId)
+  const selected = profiles.find(p=>p.id===selectedUserId)?.characters?.[0]
 
   async function handle(){
     if(!selectedUserId && !entry){ notify('❌ Selecione um herói','error'); return }
@@ -47,9 +56,10 @@ function RankModal({ entry, onClose, onSaved, userId }) {
         <label>Herói *</label>
         <select className="input" value={selectedUserId} onChange={e=>setSelectedUserId(e.target.value)}>
           <option value="">— Selecionar personagem —</option>
-          {profiles.map(p=>(
-            <option key={p.user_id} value={p.user_id}>{p.name}{p.alias?` "${p.alias}"`:''}{p.quirk_data?.name?` — ${p.quirk_data.name}`:''}</option>
-          ))}
+          {profiles.map(p=>{
+            const c = p.characters?.[0]
+            return <option key={p.id} value={p.id}>{c.name}{c.alias?` "${c.alias}"`:''}{c.quirk_data?.name?` — ${c.quirk_data.name}`:''}</option>
+          })}
         </select>
         {entry && !selectedUserId && <div style={{fontSize:9,color:'var(--dim)',marginTop:4}}>Mantendo ficha atual: {entry.player_name}</div>}
       </div>
@@ -204,7 +214,7 @@ export default function RankingView() {
                 <div style={{fontFamily:'Orbitron,monospace',fontSize:10,color:'var(--dim)',marginBottom:4}}>Nv. {level}</div>
                 <div style={{fontFamily:'Orbitron,monospace',fontSize:isFirst?16:13,fontWeight:700,color:'var(--gold)'}}>{e.points?.toLocaleString()} XP</div>
                 <div style={{display:'flex',gap:3,justifyContent:'center',flexWrap:'wrap',marginTop:4}}>
-                  {e.rank_badge&&<div style={{fontSize:8,fontWeight:700,padding:'2px 6px',borderRadius:3,background:`${RANK_COLORS[e.rank_badge]||'var(--blue-l)'}22`,color:RANK_COLORS[e.rank_badge]||'var(--blue-l)',border:`1px solid ${RANK_COLORS[e.rank_badge]||'var(--blue-l)'}44`,display:'inline-block'}}>{e.rank_badge}</div>}
+                  {e.rank_badge&&<div style={{fontSize:8,fontWeight:700,padding:'2px 6px',borderRadius:3,background:`${RANK_COLORS[e.rank_badge]||'var(--blue-l)'}22`,color:RANK_COLORS[e.rank_badge]||'var(--blue-l)',border:`1px solid ${RANK_COLORS[e.rank_badge]||'var(--blue-l)'}44`,display:'inline-block'}}>{rankIcon(e.rank_badge)} {e.rank_badge}</div>}
                   {e.department==='investigative'&&<div style={{fontSize:8,fontWeight:700,padding:'2px 6px',borderRadius:3,background:'rgba(59,111,240,.15)',color:'var(--blue-l)',border:'1px solid rgba(59,111,240,.3)',display:'inline-block'}}>{dept.label}</div>}
                 </div>
               </div>
@@ -232,7 +242,7 @@ export default function RankingView() {
                   <div style={{fontSize:10,color:'var(--muted)'}}>{e.char_name}{e.quirk_name?' · '+e.quirk_name:''}</div>
                 </div>
                 <div style={{fontFamily:'Orbitron,monospace',fontSize:10,color:'var(--dim)'}}>Nv.{level}</div>
-                {e.rank_badge&&<div style={{fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:3,background:`${RANK_COLORS[e.rank_badge]||'var(--blue-l)'}22`,color:RANK_COLORS[e.rank_badge]||'var(--blue-l)',border:`1px solid ${RANK_COLORS[e.rank_badge]||'var(--blue-l)'}44`}}>{e.rank_badge}</div>}
+                {e.rank_badge&&<div style={{fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:3,background:`${RANK_COLORS[e.rank_badge]||'var(--blue-l)'}22`,color:RANK_COLORS[e.rank_badge]||'var(--blue-l)',border:`1px solid ${RANK_COLORS[e.rank_badge]||'var(--blue-l)'}44`}}>{rankIcon(e.rank_badge)} {e.rank_badge}</div>}
                 <div style={{fontFamily:'Orbitron,monospace',fontSize:12,color:'var(--gold)'}}>{e.points?.toLocaleString()}</div>
               </div>
             )

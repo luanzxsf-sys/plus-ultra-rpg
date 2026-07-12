@@ -209,6 +209,23 @@ export function calcTechQuirkCost(tech, quirk_max) {
   return Math.max(5, Math.round(quirk_max * 0.08 * (tech.level || 1)))
 }
 
+// ── STATUS EFFECTS ────────────────────────────
+export const STATUS_EFFECTS = [
+  { key:'bleeding',  label:'Sangrando',     icon:'🩸', color:'#E5484D', durationMin:5 },
+  { key:'stunned',   label:'Atordoado',     icon:'💫', color:'#F2B705', durationMin:2 },
+  { key:'burning',   label:'Queimando',     icon:'🔥', color:'#FF7A00', durationMin:4 },
+  { key:'poisoned',  label:'Envenenado',    icon:'☠️', color:'#2FBF71', durationMin:6 },
+  { key:'frozen',    label:'Congelado',     icon:'🧊', color:'#5FE0EA', durationMin:3 },
+  { key:'strengthened', label:'Fortalecido', icon:'💪', color:'#8B5CF6', durationMin:5 },
+  { key:'weakened',  label:'Enfraquecido',  icon:'📉', color:'#8A93A6', durationMin:5 },
+  { key:'shielded',  label:'Protegido',     icon:'🛡️', color:'#3B6FF0', durationMin:3 },
+]
+export function getStatusEffect(key) { return STATUS_EFFECTS.find(s => s.key === key) }
+export function isEffectActive(effect) {
+  if (!effect?.appliedAt || !effect?.durationMin) return true
+  return Date.now() - effect.appliedAt < effect.durationMin * 60000
+}
+
 // ── ACTION TYPES ──────────────────────────────
 export const ACTION_TYPES = [
   { key:'attack',   label:'⚔️ Atacar',     color:'#F87171', class:'msg-attack',  attr:'forca',        desc:'Ataque físico direto. Usa Força.' },

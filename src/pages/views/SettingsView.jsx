@@ -5,9 +5,10 @@ import { notify } from '../../components/Toast'
 import Avatar from '../../components/Avatar'
 
 const THEMES = [
-  { k:'dark',  l:'🌑 Escuro',  desc:'Fundo preto profundo com acentos azuis.', preview:['#07071A','#0F0F2E','#60A5FA'] },
-  { k:'blue',  l:'🌊 Azul',   desc:'Dark blue, visual de cyber-oceano.',        preview:['#020B18','#041425','#64B5F6'] },
-  { k:'light', l:'☀️ Claro',   desc:'Fundo claro para quem prefere alta legibilidade.', preview:['#F0F2F8','#FFFFFF','#2563EB'] },
+  { k:'dark',  l:'🌑 Escuro',  desc:'Central de heróis à noite — cobalto e dourado.', preview:['#0A0D14','#131826','#3B6FF0'] },
+  { k:'blue',  l:'🌊 Azul',   desc:'Azul profundo, visual de patrulha costeira.',    preview:['#050914','#0A1226','#4C8DFF'] },
+  { k:'light', l:'☀️ Claro',   desc:'Fundo claro e quente para alta legibilidade.',   preview:['#F5F3EE','#FFFFFF','#2F58D6'] },
+  { k:'night', l:'🌃 Patrulha Noturna', desc:'Quase P&B com um único acento neon — pra sessões sérias.', preview:['#000000','#0A0A0A','#00E5FF'] },
 ]
 
 export default function SettingsView({ serverName, onServerNameChange, onThemeChange, currentTheme }) {

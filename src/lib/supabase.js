@@ -337,6 +337,18 @@ export async function sendMessage(msg) {
   return { data, error }
 }
 
+// Diário do Herói — atividades notáveis (fora de rp casual) do usuário, mais recentes primeiro
+export async function getUserActivity(userId, limit = 30) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('id, content, mode, created_at, location_id')
+    .eq('user_id', userId)
+    .neq('mode', 'rp')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  return { data: data || [], error }
+}
+
 export async function deleteMessage(id) {
   const { error } = await supabase.from('messages').delete().eq('id', id)
   return { error }
@@ -572,6 +584,28 @@ export async function applyCombatEffect(combatantId, hpDelta, quirkDelta = 0) {
       .update({ hp: newHp, quirk_charge: newQk })
       .eq('user_id', data.user_id)
   }
+  return { data, error }
+}
+
+// ── STATUS EFFECTS (aplicar/remover em um combatant) ──────────
+export async function applyStatusEffect(combatantId, effectKey) {
+  const { data: c, error: fetchErr } = await supabase
+    .from('combatants').select('status_effects').eq('id', combatantId).single()
+  if (fetchErr) return { error: fetchErr }
+  const current = c.status_effects || []
+  const next = [...current.filter(e => e.key !== effectKey), { key: effectKey, appliedAt: Date.now() }]
+  const { data, error } = await supabase.from('combatants')
+    .update({ status_effects: next }).eq('id', combatantId).select().single()
+  return { data, error }
+}
+
+export async function removeStatusEffect(combatantId, effectKey) {
+  const { data: c, error: fetchErr } = await supabase
+    .from('combatants').select('status_effects').eq('id', combatantId).single()
+  if (fetchErr) return { error: fetchErr }
+  const next = (c.status_effects || []).filter(e => e.key !== effectKey)
+  const { data, error } = await supabase.from('combatants')
+    .update({ status_effects: next }).eq('id', combatantId).select().single()
   return { data, error }
 }
 
