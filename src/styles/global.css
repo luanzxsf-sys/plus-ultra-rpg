@@ -358,12 +358,20 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
 .nav-item { display: flex; align-items: center; gap: 8px; padding: 9px 12px; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 13px; color: var(--muted); border-left: 2px solid transparent; transition: all .15s; user-select: none; margin: 1px 6px; border-radius: 6px; }
 .nav-item:hover { color: var(--text); background: rgba(255,255,255,.05); }
 .nav-item.active { color: var(--text-h); background: linear-gradient(90deg, color-mix(in srgb, var(--blue) 28%, transparent), transparent); border-left-color: var(--blue); box-shadow: -2px 0 12px -4px var(--blue); }
-.nav-item .ico { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.nav-item .ico { width: 18px; height:18px; display:flex; align-items:center; justify-content:center; flex-shrink: 0; }
 .nbadge { margin-left: auto; background: var(--red); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
 
 .sidebar.collapsed { width: 60px; }
 .sidebar.collapsed .logo { padding: 14px 4px; }
 .sidebar.collapsed .logo-title { font-size: 16px; letter-spacing: 1px; }
+.logo-emblem {
+  width: 38px; height: 38px; margin: 0 auto;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--blue), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  box-shadow: 0 2px 12px -2px color-mix(in srgb, var(--blue) 60%, transparent);
+}
 .sidebar-collapse-btn {
   position: absolute;
   top: 12px;

@@ -344,6 +344,7 @@ function AchievementsCard({ char }) {
   const level = char?.level ?? calcLevel(char?.xp_total ?? char?.xp ?? 0)
   const { unlocked, total, pct } = computeProgress(char, level)
   const unlockedIds = new Set(unlocked.map(a=>a.id))
+  const [selected, setSelected] = useState(null)
   return (
     <div className="card">
       <div className="card-title">🎖️ Conquistas <span style={{fontSize:10,color:'var(--dim)',fontWeight:400,textTransform:'none',letterSpacing:0}}>{unlocked.length}/{total}</span></div>
@@ -353,13 +354,14 @@ function AchievementsCard({ char }) {
       <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:6}}>
         {ACHIEVEMENTS.map(a=>{
           const on = unlockedIds.has(a.id)
+          const isSel = selected?.id===a.id
           return (
-            <div key={a.id} title={`${a.label}${on?'':' (bloqueado)'} — ${a.desc}`}
+            <div key={a.id} onClick={()=>setSelected(isSel?null:a)}
               style={{
                 aspectRatio:'1',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:16,cursor:'default',
+                fontSize:16,cursor:'pointer',
                 background:on?'linear-gradient(135deg,rgba(242,183,5,.18),rgba(242,183,5,.05))':'var(--panel)',
-                border:`1px solid ${on?'rgba(242,183,5,.4)':'var(--border)'}`,
+                border:`1px solid ${isSel?'var(--gold)':on?'rgba(242,183,5,.4)':'var(--border)'}`,
                 filter:on?'none':'grayscale(1) opacity(.35)',
                 transition:'all .15s',
               }}>
@@ -368,6 +370,14 @@ function AchievementsCard({ char }) {
           )
         })}
       </div>
+      {selected && (
+        <div style={{marginTop:10,padding:'8px 10px',background:'var(--panel)',borderRadius:7,border:'1px solid var(--border)'}}>
+          <div style={{fontSize:12,fontWeight:700,color:unlockedIds.has(selected.id)?'var(--gold)':'var(--muted)'}}>
+            {selected.icon} {selected.label} {!unlockedIds.has(selected.id) && <span style={{fontSize:9,color:'var(--dim)',fontWeight:400}}>(bloqueada)</span>}
+          </div>
+          <div style={{fontSize:11,color:'var(--muted)',marginTop:3}}>{selected.desc}</div>
+        </div>
+      )}
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { getAllProfiles, supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import Avatar from '../../components/Avatar'
 import { gradeLabel, gradeColor, calcLevel, ATTR_META, ATTR_KEYS, QUIRK_TYPE_BONUSES, getSpecialty, calcAttrsWithSpecialty } from '../../lib/gameSystem'
-import { computeProgress } from '../../lib/achievements'
+import { computeProgress, ACHIEVEMENTS } from '../../lib/achievements'
 
 // ── PROFILE DETAIL MODAL ──────────────────────────────────────
 function PlayerDetailModal({ p, onClose, isMe }) {
@@ -12,6 +12,7 @@ function PlayerDetailModal({ p, onClose, isMe }) {
   const xpPct = (char?.xp_max > 0) ? Math.min(100, Math.round((char.xp / char.xp_max) * 100)) : 0
   const specObj = getSpecialty(char?.specialty)
   const effectiveAttrs = char?.attrs ? calcAttrsWithSpecialty(char.attrs, char?.specialty) : {}
+  const [showAllAch, setShowAllAch] = useState(false)
 
   return (
     <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -135,12 +136,28 @@ function PlayerDetailModal({ p, onClose, isMe }) {
 
             {/* Achievements summary */}
             {(() => { const { unlocked, total } = computeProgress(char, level); return (
-              <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:12, padding:'6px 10px', background:'rgba(242,183,5,.06)', border:'1px solid rgba(242,183,5,.2)', borderRadius:7 }}>
-                <span style={{ fontSize:14 }}>🎖️</span>
-                <span style={{ fontSize:10, color:'var(--gold)', fontWeight:700 }}>{unlocked.length}/{total} conquistas</span>
-                <div style={{ display:'flex', gap:2, marginLeft:'auto' }}>
-                  {unlocked.slice(0,6).map(a=><span key={a.id} title={a.label} style={{fontSize:12}}>{a.icon}</span>)}
+              <div style={{ marginBottom:12, padding:'6px 10px', background:'rgba(242,183,5,.06)', border:'1px solid rgba(242,183,5,.2)', borderRadius:7 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer' }} onClick={()=>setShowAllAch(s=>!s)}>
+                  <span style={{ fontSize:14 }}>🎖️</span>
+                  <span style={{ fontSize:10, color:'var(--gold)', fontWeight:700 }}>{unlocked.length}/{total} conquistas</span>
+                  <span style={{ fontSize:9, color:'var(--dim)', marginLeft:'auto' }}>{showAllAch?'▲ ocultar':'▼ ver todas'}</span>
                 </div>
+                {showAllAch && (
+                  <div style={{ display:'flex', flexDirection:'column', gap:5, marginTop:8 }}>
+                    {ACHIEVEMENTS.map(a=>{
+                      const on = unlocked.some(u=>u.id===a.id)
+                      return (
+                        <div key={a.id} style={{ display:'flex', alignItems:'center', gap:7, opacity:on?1:.45 }}>
+                          <span style={{ fontSize:14, filter:on?'none':'grayscale(1)' }}>{a.icon}</span>
+                          <div style={{ minWidth:0 }}>
+                            <div style={{ fontSize:10, fontWeight:700, color:on?'var(--gold)':'var(--muted)' }}>{a.label}</div>
+                            <div style={{ fontSize:9, color:'var(--dim)' }}>{a.desc}</div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )})()}
 

@@ -19,6 +19,20 @@ import {
   ATTR_META, ATTR_KEYS, getMissionType, calcTechQuirkXp,
   STATUS_EFFECTS, getStatusEffect, isEffectActive
 } from '../../lib/gameSystem'
+import { Droplet, Zap, Flame, Skull, Snowflake, Dumbbell, TrendingDown, ShieldCheck, Sword, Sparkle, ShieldPlus, Wind, HeartPulse, Brain, MessagesSquare, Shield, ShieldOff, Dices, CheckCircle2 } from 'lucide-react'
+
+const STATUS_ICONS = { droplet:Droplet, zap:Zap, flame:Flame, skull:Skull, snowflake:Snowflake, dumbbell:Dumbbell, trendingDown:TrendingDown, shieldCheck:ShieldCheck }
+function StatusIcon({ iconKey, size=11 }) {
+  const Ico = STATUS_ICONS[iconKey]
+  return Ico ? <Ico size={size} strokeWidth={2.3}/> : null
+}
+const ACTION_ICONS = { sword:Sword, sparkle:Sparkle, shieldPlus:ShieldPlus, wind:Wind, heartPulse:HeartPulse, brain:Brain, messagesSquare:MessagesSquare }
+function ActionIcon({ iconKey, size=14 }) {
+  const Ico = ACTION_ICONS[iconKey]
+  return Ico ? <Ico size={size} strokeWidth={2.2}/> : null
+}
+// Remove o emoji-prefixo de um label tipo "⚔️ Atacar" -> "Atacar"
+function cleanLabel(label){ return (label||'').replace(/^\S+\s*/,'') }
 
 function rollD(sides){ return Math.floor(Math.random()*sides)+1 }
 
@@ -114,8 +128,8 @@ function StatusEffectRow({ combatant, canEdit, onApply, onRemove }) {
         return (
           <span key={e.key} title={`${meta.label} — clique pra remover`}
             onClick={ev=>{ ev.stopPropagation(); canEdit && onRemove(combatant.id, e.key) }}
-            style={{ fontSize:9, cursor:canEdit?'pointer':'default', background:`${meta.color}22`, border:`1px solid ${meta.color}55`, borderRadius:3, padding:'0 3px' }}>
-            {meta.icon}
+            style={{ display:'inline-flex', alignItems:'center', cursor:canEdit?'pointer':'default', background:`${meta.color}22`, border:`1px solid ${meta.color}55`, borderRadius:3, padding:'1px 4px', color:meta.color }}>
+            <StatusIcon iconKey={meta.iconKey}/>
           </span>
         )
       })}
@@ -124,12 +138,12 @@ function StatusEffectRow({ combatant, canEdit, onApply, onRemove }) {
           style={{ fontSize:9, cursor:'pointer', color:'var(--dim)', border:'1px dashed var(--border)', borderRadius:3, padding:'0 3px' }}>+</span>
       )}
       {picking && (
-        <div onClick={ev=>ev.stopPropagation()} style={{ position:'absolute', top:16, left:0, zIndex:50, background:'var(--panel)', border:'1px solid var(--border)', borderRadius:6, padding:4, display:'flex', flexWrap:'wrap', gap:3, width:120, boxShadow:'0 4px 16px rgba(0,0,0,.5)' }}>
+        <div onClick={ev=>ev.stopPropagation()} style={{ position:'absolute', top:16, left:0, zIndex:50, background:'var(--panel)', border:'1px solid var(--border)', borderRadius:6, padding:4, display:'flex', flexWrap:'wrap', gap:3, width:130, boxShadow:'0 4px 16px rgba(0,0,0,.5)' }}>
           {STATUS_EFFECTS.map(s=>(
             <span key={s.key} title={s.label} onClick={()=>{ onApply(combatant.id, s.key); setPicking(false) }}
-              style={{ fontSize:13, cursor:'pointer', padding:2, borderRadius:4 }}
+              style={{ cursor:'pointer', padding:5, borderRadius:4, color:s.color, display:'flex' }}
               onMouseEnter={e=>e.currentTarget.style.background='var(--surface)'}
-              onMouseLeave={e=>e.currentTarget.style.background='transparent'}>{s.icon}</span>
+              onMouseLeave={e=>e.currentTarget.style.background='transparent'}><StatusIcon iconKey={s.iconKey} size={14}/></span>
           ))}
         </div>
       )}
@@ -212,8 +226,9 @@ function CombatPanel({ combatants, combatLog, targetId, setTargetId, myChar,
                   color: actionMode===at.key ? at.color : at.color+'99',
                   cursor:'pointer', fontFamily:'Rajdhani,sans-serif', fontWeight:700,
                   fontSize:11, textAlign:'center', transition:'all .15s',
+                  display:'flex', alignItems:'center', justifyContent:'center', gap:5,
                 }}>
-                {at.label}
+                <ActionIcon iconKey={at.iconKey}/> {cleanLabel(at.label)}
               </button>
             ))}
           </div>
@@ -674,28 +689,28 @@ function PendingActionBanner({ action, combatants, myUserId, activeNpcId, respon
                 <>
                   <button className="btn" style={{ padding:'8px 12px', background:'rgba(34,211,238,.15)', color:'var(--teal-l)', border:'1px solid rgba(34,211,238,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
                     onClick={()=>onArmRespond('dodge', action)}>
-                    💨 Desviar<br/><span style={{fontSize:9,fontWeight:400}}>Roll Agilidade</span>
+                    <Wind size={15} style={{display:'block',margin:'0 auto 2px'}}/>Desviar<br/><span style={{fontSize:9,fontWeight:400}}>Roll Agilidade</span>
                   </button>
                   <button className="btn" style={{ padding:'8px 12px', background:'rgba(59,111,240,.15)', color:'var(--blue-l)', border:'1px solid rgba(59,111,240,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
                     onClick={()=>onArmRespond('defend', action)}>
-                    🛡️ Defender<br/><span style={{fontSize:9,fontWeight:400}}>Roll Resistência</span>
+                    <ShieldPlus size={15} style={{display:'block',margin:'0 auto 2px'}}/>Defender<br/><span style={{fontSize:9,fontWeight:400}}>Roll Resistência</span>
                   </button>
                   <button className="btn" style={{ padding:'8px 12px', background:'rgba(229,72,77,.12)', color:'var(--red-l)', border:'1px solid rgba(229,72,77,.35)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
                     onClick={()=>onArmRespond('take', action)}>
-                    💥 Absorver<br/><span style={{fontSize:9,fontWeight:400}}>Dano completo</span>
+                    <ShieldOff size={15} style={{display:'block',margin:'0 auto 2px'}}/>Absorver<br/><span style={{fontSize:9,fontWeight:400}}>Dano completo</span>
                   </button>
                 </>
               )}
               {action.attr_check && (!isAttackType || !['agilidade','resistencia'].includes(action.attr_check)) && (
                 <button className="btn" style={{ padding:'8px 12px', background:'rgba(139,92,246,.15)', color:'var(--purple-l)', border:'1px solid rgba(139,92,246,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
                   onClick={()=>onArmRespond(action.attr_check, action)}>
-                  🎲 Rolar {atMeta?.label}<br/><span style={{fontSize:9,fontWeight:400}}>DC {action.dc||12}</span>
+                  <Dices size={15} style={{display:'block',margin:'0 auto 2px'}}/>Rolar {atMeta?.label}<br/><span style={{fontSize:9,fontWeight:400}}>DC {action.dc||12}</span>
                 </button>
               )}
               {!isAttackType && !action.attr_check && (
                 <button className="btn" style={{ padding:'8px 12px', background:'rgba(139,92,246,.15)', color:'var(--purple-l)', border:'1px solid rgba(139,92,246,.4)', fontFamily:'Rajdhani,sans-serif', fontWeight:700, fontSize:11 }}
                   onClick={()=>onArmRespond('ack', action)}>
-                  ✅ Reagir<br/><span style={{fontSize:9,fontWeight:400}}>Sem roll</span>
+                  <CheckCircle2 size={15} style={{display:'block',margin:'0 auto 2px'}}/>Reagir<br/><span style={{fontSize:9,fontWeight:400}}>Sem roll</span>
                 </button>
               )}
             </div>
@@ -814,7 +829,7 @@ function DeclarePendingModal({ session, combatants, skills, missionDifficulty, a
           {ACTION_TYPES.filter(a=>['attack','skill','intel','charisma'].includes(a.key)).map(at=>(
             <div key={at.key} onClick={()=>setForm(f=>({...f,actionType:at.key}))}
               style={{ border:`1px solid ${form.actionType===at.key?at.color:'var(--border)'}`, borderRadius:5, padding:'6px 4px', cursor:'pointer', textAlign:'center', background:form.actionType===at.key?`${at.color}15`:'transparent' }}>
-              <div style={{ fontSize:15, marginBottom:2 }}>{at.label.split(' ')[0]}</div>
+              <div style={{ fontSize:15, marginBottom:2, display:'flex', justifyContent:'center' }}><ActionIcon iconKey={at.iconKey}/></div>
               <div style={{ fontSize:9, color:form.actionType===at.key?at.color:'var(--muted)', fontWeight:700 }}>{at.label.split(' ').slice(1).join(' ')}</div>
             </div>
           ))}

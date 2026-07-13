@@ -211,14 +211,14 @@ export function calcTechQuirkCost(tech, quirk_max) {
 
 // ── STATUS EFFECTS ────────────────────────────
 export const STATUS_EFFECTS = [
-  { key:'bleeding',  label:'Sangrando',     icon:'🩸', color:'#E5484D', durationMin:5 },
-  { key:'stunned',   label:'Atordoado',     icon:'💫', color:'#F2B705', durationMin:2 },
-  { key:'burning',   label:'Queimando',     icon:'🔥', color:'#FF7A00', durationMin:4 },
-  { key:'poisoned',  label:'Envenenado',    icon:'☠️', color:'#2FBF71', durationMin:6 },
-  { key:'frozen',    label:'Congelado',     icon:'🧊', color:'#5FE0EA', durationMin:3 },
-  { key:'strengthened', label:'Fortalecido', icon:'💪', color:'#8B5CF6', durationMin:5 },
-  { key:'weakened',  label:'Enfraquecido',  icon:'📉', color:'#8A93A6', durationMin:5 },
-  { key:'shielded',  label:'Protegido',     icon:'🛡️', color:'#3B6FF0', durationMin:3 },
+  { key:'bleeding',  label:'Sangrando',     icon:'🩸', iconKey:'droplet',    color:'#E5484D', durationMin:5 },
+  { key:'stunned',   label:'Atordoado',     icon:'💫', iconKey:'zap',        color:'#F2B705', durationMin:2 },
+  { key:'burning',   label:'Queimando',     icon:'🔥', iconKey:'flame',      color:'#FF7A00', durationMin:4 },
+  { key:'poisoned',  label:'Envenenado',    icon:'☠️', iconKey:'skull',      color:'#2FBF71', durationMin:6 },
+  { key:'frozen',    label:'Congelado',     icon:'🧊', iconKey:'snowflake',  color:'#5FE0EA', durationMin:3 },
+  { key:'strengthened', label:'Fortalecido', icon:'💪', iconKey:'dumbbell',  color:'#8B5CF6', durationMin:5 },
+  { key:'weakened',  label:'Enfraquecido',  icon:'📉', iconKey:'trendingDown', color:'#8A93A6', durationMin:5 },
+  { key:'shielded',  label:'Protegido',     icon:'🛡️', iconKey:'shieldCheck', color:'#3B6FF0', durationMin:3 },
 ]
 export function getStatusEffect(key) { return STATUS_EFFECTS.find(s => s.key === key) }
 export function isEffectActive(effect) {
@@ -228,13 +228,13 @@ export function isEffectActive(effect) {
 
 // ── ACTION TYPES ──────────────────────────────
 export const ACTION_TYPES = [
-  { key:'attack',   label:'⚔️ Atacar',     color:'#F87171', class:'msg-attack',  attr:'forca',        desc:'Ataque físico direto. Usa Força.' },
-  { key:'skill',    label:'✨ Técnica',     color:'#A78BFA', class:'msg-skill',   attr:'controle',     desc:'Usa uma técnica do Quirk.' },
-  { key:'defend',   label:'🛡️ Defender',  color:'#60A5FA', class:'msg-defend',  attr:'resistencia',  desc:'Postura defensiva. Reduz dano recebido.' },
-  { key:'dodge',    label:'💨 Desviar',    color:'#22D3EE', class:'msg-dodge',   attr:'agilidade',    desc:'Tenta esquivar de um ataque pendente.' },
-  { key:'heal',     label:'💚 Curar',      color:'#57F287', class:'msg-heal',    attr:'carisma',      desc:'Cura a si mesmo ou um aliado.' },
-  { key:'intel',    label:'🧠 Investigar', color:'#FBBF24', class:'msg-intel',   attr:'inteligencia', desc:'Analisa a situação. Pode revelar fraquezas.' },
-  { key:'charisma', label:'💬 Convencer',  color:'#F472B6', class:'msg-charisma',attr:'carisma',      desc:'Tenta persuadir ou intimidar.' },
+  { key:'attack',   label:'⚔️ Atacar',     iconKey:'sword',    color:'#F87171', class:'msg-attack',  attr:'forca',        desc:'Ataque físico direto. Usa Força.' },
+  { key:'skill',    label:'✨ Técnica',     iconKey:'sparkle',  color:'#A78BFA', class:'msg-skill',   attr:'controle',     desc:'Usa uma técnica do Quirk.' },
+  { key:'defend',   label:'🛡️ Defender',  iconKey:'shieldPlus',color:'#60A5FA', class:'msg-defend',  attr:'resistencia',  desc:'Postura defensiva. Reduz dano recebido.' },
+  { key:'dodge',    label:'💨 Desviar',    iconKey:'wind',     color:'#22D3EE', class:'msg-dodge',   attr:'agilidade',    desc:'Tenta esquivar de um ataque pendente.' },
+  { key:'heal',     label:'💚 Curar',      iconKey:'heartPulse',color:'#57F287', class:'msg-heal',    attr:'carisma',      desc:'Cura a si mesmo ou um aliado.' },
+  { key:'intel',    label:'🧠 Investigar', iconKey:'brain',    color:'#FBBF24', class:'msg-intel',   attr:'inteligencia', desc:'Analisa a situação. Pode revelar fraquezas.' },
+  { key:'charisma', label:'💬 Convencer',  iconKey:'messagesSquare',color:'#F472B6', class:'msg-charisma',attr:'carisma',      desc:'Tenta persuadir ou intimidar.' },
 ]
 export function getActionType(key) { return ACTION_TYPES.find(a=>a.key===key) }
 

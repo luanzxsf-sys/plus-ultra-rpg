@@ -18,19 +18,21 @@ import PlayersView   from './views/PlayersView'
 import DiceView      from './views/DiceView'
 import SettingsView  from './views/SettingsView'
 
+import { MessageCircle, Map, Drama, ClipboardList, Sparkles, Backpack, ScrollText, Trophy, Newspaper, Users, Dices, Settings, Shield } from 'lucide-react'
+
 const VIEWS = [
-  { id:'chat',     label:'Chat Geral',     ico:'💬', cat:'Encenação' },
-  { id:'explore',  label:'Locais',         ico:'🗺️', cat:'Encenação' },
-  { id:'npcs',     label:'NPCs',           ico:'🎭', cat:'Encenação' },
-  { id:'ficha',    label:'Ficha',          ico:'📋', cat:'Personagem' },
-  { id:'quirk',    label:'Quirk',          ico:'✨', cat:'Personagem' },
-  { id:'inv',      label:'Inventário',     ico:'🎒', cat:'Personagem' },
-  { id:'quests',   label:'Missões',        ico:'📜', cat:'Missões', badge:true },
-  { id:'ranking',  label:'Ranking',        ico:'🏆', cat:'Missões' },
-  { id:'feed',     label:'Feed',           ico:'📰', cat:'Comunidade' },
-  { id:'players',  label:'Jogadores',      ico:'👥', cat:'Comunidade' },
-  { id:'dice',     label:'Dados',          ico:'🎲', cat:'Sistema' },
-  { id:'settings', label:'Configurações',  ico:'⚙️', cat:'Sistema' },
+  { id:'chat',     label:'Chat Geral',     ico:MessageCircle,  cat:'Encenação' },
+  { id:'explore',  label:'Locais',         ico:Map,            cat:'Encenação' },
+  { id:'npcs',     label:'NPCs',           ico:Drama,          cat:'Encenação' },
+  { id:'ficha',    label:'Ficha',          ico:ClipboardList,  cat:'Personagem' },
+  { id:'quirk',    label:'Quirk',          ico:Sparkles,       cat:'Personagem' },
+  { id:'inv',      label:'Inventário',     ico:Backpack,       cat:'Personagem' },
+  { id:'quests',   label:'Missões',        ico:ScrollText,     cat:'Missões', badge:true },
+  { id:'ranking',  label:'Ranking',        ico:Trophy,         cat:'Missões' },
+  { id:'feed',     label:'Feed',           ico:Newspaper,      cat:'Comunidade' },
+  { id:'players',  label:'Jogadores',      ico:Users,          cat:'Comunidade' },
+  { id:'dice',     label:'Dados',          ico:Dices,          cat:'Sistema' },
+  { id:'settings', label:'Configurações',  ico:Settings,       cat:'Sistema' },
 ]
 const CATS = ['Encenação','Personagem','Missões','Comunidade','Sistema']
 
@@ -130,7 +132,11 @@ export default function AppShell() {
           {collapsed?'»':'«'}
         </button>
         <div className="logo">
-          <div className="logo-title">{collapsed?'PU':'PLUS ULTRA'}</div>
+          {collapsed ? (
+            <div className="logo-emblem"><Shield size={20} strokeWidth={2.2}/></div>
+          ) : (
+            <div className="logo-title">PLUS ULTRA</div>
+          )}
           {!collapsed && <>
             <div className="logo-sub">Hero RPG Platform</div>
             <div className="logo-badge">{serverName}</div>
@@ -143,7 +149,7 @@ export default function AppShell() {
               {!collapsed && <div className="nav-cat">{cat}</div>}
               {VIEWS.filter(v => v.cat === cat).map(v => (
                 <div key={v.id} className={`nav-item ${view===v.id?'active':''} ${collapsed?'collapsed':''}`} onClick={() => navigate(v.id)} title={collapsed?v.label:''}>
-                  <span className="ico">{v.ico}</span>
+                  <span className="ico"><v.ico size={16} strokeWidth={2}/></span>
                   {!collapsed && v.label}
                   {v.badge && questCount > 0 && <span className="nbadge">{questCount}</span>}
                 </div>
