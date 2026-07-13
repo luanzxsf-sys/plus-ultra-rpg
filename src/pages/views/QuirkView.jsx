@@ -65,7 +65,7 @@ export default function QuirkView({ onRefreshChar }) {
         <button className="btn btn-purple btn-sm" onClick={()=>{setEditSkillIdx(null);setShowSkill(true)}} style={{ color:'#fff' }}>+ Técnica</button>
       </div>
 
-      <div className="quirk-layout" style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14 }}>
+      <div className="quirk-layout" style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,maxWidth:1100,margin:'0 auto' }}>
         <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
           <div className="card card-purple">
             {q.name ? (

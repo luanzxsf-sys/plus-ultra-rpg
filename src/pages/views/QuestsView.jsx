@@ -282,7 +282,7 @@ export default function QuestsView({ onQuestCountChange }) {
         </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 265px', gap:14 }} className="q-layout">
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 280px', gap:14, maxWidth:1200, margin:'0 auto' }} className="q-layout">
         <div>
           {displayed.length === 0 && (
             <div style={{ textAlign:'center', padding:32, color:'var(--muted)', fontSize:12 }}>

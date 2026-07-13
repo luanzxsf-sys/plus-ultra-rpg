@@ -561,7 +561,7 @@ function LocationsGrid({ locations, onSelect, onAdd, onEdit, onDelete }) {
         </div>
       )}
       {viewMode==='map' && locations.length>0 && <LocationsMap locations={sorted} onSelect={onSelect}/>}
-      <div className="loc-news-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14 }}>
+      <div className="loc-news-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:14 }}>
         {sorted.map(loc=>(
           <div key={loc.id} className="loc-news-card" onClick={()=>onSelect(loc)}>
             {loc.cover_url
@@ -1000,6 +1000,17 @@ function LocationChat({ loc, onBack, onRefreshLocs }) {
   },[loc.id])
 
   useEffect(()=>{ endRef.current?.scrollIntoView({behavior:'smooth'}) },[messages])
+
+  useEffect(()=>{
+    const wasActive = !!prevSessionRef.current
+    if (session && !wasActive) {
+      setCombatFlash(true)
+      const t = setTimeout(()=>setCombatFlash(false), 700)
+      prevSessionRef.current = session
+      return ()=>clearTimeout(t)
+    }
+    prevSessionRef.current = session
+  },[session])
 
   function getMyCombatant() {
     if (activeNpc) {
@@ -1917,16 +1928,6 @@ export default function ExploreView() {
   const [editLoc,setEditLoc]=useState(null)
   async function load(){const{data}=await getLocations();if(data)setLocations(data)}
   useEffect(()=>{load()},[])
-  useEffect(()=>{
-    const wasActive = !!prevSessionRef.current
-    if (session && !wasActive) {
-      setCombatFlash(true)
-      const t = setTimeout(()=>setCombatFlash(false), 700)
-      prevSessionRef.current = session
-      return ()=>clearTimeout(t)
-    }
-    prevSessionRef.current = session
-  },[session])
   async function handleDelete(loc){if(!confirm(`Remover "${loc.name}"?`))return;await deleteLocation(loc.id);notify('🗑️ Removido');load()}
   if(currentLoc) return <LocationChat loc={currentLoc} onBack={()=>{setCurrentLoc(null);load()}} onRefreshLocs={load}/>
   return(<><LocationsGrid locations={locations} onSelect={setCurrentLoc} onAdd={()=>{setEditLoc(null);setShowModal(true)}} onEdit={loc=>{setEditLoc(loc);setShowModal(true)}} onDelete={handleDelete}/>{showModal&&<LocationModal loc={editLoc} onClose={()=>{setShowModal(false);setEditLoc(null)}} onSaved={()=>{load();setShowModal(false);setEditLoc(null)}}/>}</>)

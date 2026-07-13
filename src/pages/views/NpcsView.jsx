@@ -210,7 +210,7 @@ export default function NpcsView() {
         </div>
       )}
 
-      <div className="npc-grid" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
+      <div className="npc-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(230px,1fr))',gap:12}}>
         {filtered.map(npc=>{
           const rs=ROLE_STYLE[npc.role]||ROLE_STYLE.npc
           return(

@@ -366,7 +366,7 @@ export default function PlayersView() {
           <div style={{ fontFamily:'Bangers,cursive', fontSize:12, letterSpacing:2, color:'var(--green-l)', marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
             <span className="live" /> ONLINE ({online.length})
           </div>
-          <div className="players-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
+          <div className="players-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(250px,1fr))', gap:10 }}>
             {online.map(p => (
               <PlayerCard key={p.id} p={p} isMe={p.id===user?.id} onSelect={()=>setSelected(p)} />
             ))}
@@ -380,7 +380,7 @@ export default function PlayersView() {
           <div style={{ fontFamily:'Bangers,cursive', fontSize:12, letterSpacing:2, color:'var(--dim)', marginBottom:8 }}>
             ⚫ OFFLINE ({offline.length})
           </div>
-          <div className="players-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
+          <div className="players-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(250px,1fr))', gap:10 }}>
             {offline.map(p => (
               <PlayerCard key={p.id} p={p} isMe={p.id===user?.id} onSelect={()=>setSelected(p)} />
             ))}
@@ -390,7 +390,7 @@ export default function PlayersView() {
 
       {/* All players if no separation needed */}
       {!loading && !error && players.length > 0 && online.length === 0 && offline.length === 0 && (
-        <div className="players-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
+        <div className="players-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(250px,1fr))', gap:10 }}>
           {filtered.map(p => (
             <PlayerCard key={p.id} p={p} isMe={p.id===user?.id} onSelect={()=>setSelected(p)} />
           ))}

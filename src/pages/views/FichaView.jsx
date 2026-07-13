@@ -438,7 +438,7 @@ export default function FichaView({ onRefreshChar }) {
         <button className="btn btn-danger btn-sm" style={{marginLeft:'auto'}} onClick={()=>setShowDelete(true)}>🗑️ Excluir</button>
       </div>
 
-      <div className="ficha-grid" style={{display:'grid',gridTemplateColumns:'280px 1fr',gap:12}}>
+      <div className="ficha-grid" style={{display:'grid',gridTemplateColumns:'320px minmax(0,760px)',gap:16,maxWidth:1180,margin:'0 auto'}}>
         {/* LEFT */}
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
           <AchievementsCard char={char}/>
