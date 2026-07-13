@@ -40,6 +40,82 @@ function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme || 'dark')
 }
 
+// Puxar pra baixo no topo de qualquer tela (mobile) recarrega a página —
+// funciona em cima de qualquer view, sem precisar mexer em cada uma.
+function PullToRefresh({ children }) {
+  const [pull, setPull] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const startY = useRef(0)
+  const scrollEl = useRef(null)
+  const pulling = useRef(false)
+  const THRESHOLD = 68
+
+  function findScrollable(el) {
+    while (el && el !== document.body) {
+      const style = window.getComputedStyle(el)
+      if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) return el
+      el = el.parentElement
+    }
+    return document.scrollingElement
+  }
+
+  function onTouchStart(e) {
+    if (refreshing) return
+    const target = findScrollable(e.target)
+    scrollEl.current = target
+    if (!target || target.scrollTop <= 0) {
+      startY.current = e.touches[0].clientY
+      pulling.current = true
+    } else {
+      pulling.current = false
+    }
+  }
+  function onTouchMove(e) {
+    if (!pulling.current || refreshing) return
+    const dy = e.touches[0].clientY - startY.current
+    if (dy > 0 && (!scrollEl.current || scrollEl.current.scrollTop <= 0)) {
+      setPull(Math.min(dy * 0.5, 100))
+    } else if (dy <= 0) {
+      pulling.current = false
+      setPull(0)
+    }
+  }
+  function onTouchEnd() {
+    if (!pulling.current) return
+    pulling.current = false
+    if (pull > THRESHOLD) {
+      setRefreshing(true)
+      setPull(THRESHOLD)
+      setTimeout(() => window.location.reload(), 300)
+    } else {
+      setPull(0)
+    }
+  }
+
+  return (
+    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+      style={{ position:'relative', flex:1, minHeight:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{
+        position:'absolute', top:0, left:0, right:0, display:'flex', justifyContent:'center', alignItems:'center',
+        height:50, transform:`translateY(${pull-50}px)`, transition: pulling.current?'none':'transform .25s ease',
+        zIndex:30, pointerEvents:'none',
+      }}>
+        <div style={{
+          width:30, height:30, borderRadius:'50%', background:'var(--card)', border:'2px solid var(--blue)',
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize:14,
+          transform:`rotate(${refreshing?0:pull*3}deg)`, opacity:Math.min(pull/THRESHOLD,1),
+          animation: refreshing ? 'spin .7s linear infinite' : 'none',
+        }}>
+          {refreshing ? '↻' : '↓'}
+        </div>
+      </div>
+      <div style={{ flex:1, minHeight:0, display:'flex', flexDirection:'column', overflow:'hidden', transform:`translateY(${pull}px)`, transition: pulling.current?'none':'transform .25s ease' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export default function AppShell() {
   const { user, profile, character, refreshCharacter } = useAuth()
   const [view, setView]               = useState('chat')
