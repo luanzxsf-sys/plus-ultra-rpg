@@ -438,12 +438,10 @@ export default function FichaView({ onRefreshChar }) {
         <button className="btn btn-danger btn-sm" style={{marginLeft:'auto'}} onClick={()=>setShowDelete(true)}>🗑️ Excluir</button>
       </div>
 
-      <div className="ficha-grid" style={{display:'grid',gridTemplateColumns:'320px minmax(0,760px)',gap:16,maxWidth:1180,margin:'0 auto'}}>
-        {/* LEFT */}
-        <div style={{display:'flex',flexDirection:'column',gap:12}}>
-          <AchievementsCard char={char}/>
-          <HeroDiaryCard userId={user.id}/>
-          <div className="card" style={{ backgroundImage: quirkTypeBg(char.quirk_data?.type, QUIRK_TYPE_BONUSES[char.quirk_data?.type]?.color), backgroundBlendMode:'overlay' }}>
+      <div className="ficha-grid" style={{columns:'3 320px',columnGap:16,maxWidth:1300,margin:'0 auto'}}>
+        <AchievementsCard char={char}/>
+        <HeroDiaryCard userId={user.id}/>
+        <div className="card" style={{ backgroundImage: quirkTypeBg(char.quirk_data?.type, QUIRK_TYPE_BONUSES[char.quirk_data?.type]?.color), backgroundBlendMode:'overlay' }}>
             <div className="card-title">👤 Identidade</div>
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
               <Avatar name={char.name} color={char.avatar_color} url={char.avatar_url} size={56}/>
@@ -513,11 +511,8 @@ export default function FichaView({ onRefreshChar }) {
           )}
 
           {char.bio&&<div className="card"><div className="card-title">🧠 Histórico</div><div style={{fontSize:11,color:'var(--muted)',lineHeight:1.7}}>{char.bio}</div></div>}
-        </div>
 
-        {/* RIGHT */}
-        <div style={{display:'flex',flexDirection:'column',gap:12}}>
-          {char.quirk_data?.name?(
+        {char.quirk_data?.name?(
             <div className="card card-purple">
               <div className="card-title" style={{color:'var(--purple-l)'}}>✨ {char.quirk_data.name}
                 <div style={{display:'flex',gap:5,alignItems:'center'}}>
@@ -562,7 +557,6 @@ export default function FichaView({ onRefreshChar }) {
               </div>
             </div>
           )}
-        </div>
       </div>
 
       {showEdit   &&<EditCharModal char={char} onClose={()=>setShowEdit(false)} onSaved={handleSaved}/>}

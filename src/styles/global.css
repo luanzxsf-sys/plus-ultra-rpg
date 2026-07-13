@@ -211,6 +211,8 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
 
 /* ── CARD ── */
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; background-image: linear-gradient(180deg, color-mix(in srgb, var(--text-h) 3%, transparent), transparent 40%); }
+.ficha-grid { display: block; }
+.ficha-grid > * { break-inside: avoid; -webkit-column-break-inside: avoid; margin-bottom: 16px; }
 .card-glow   { border-color: var(--glow); }
 .card-gold   { border-color: rgba(242,183,5,.35); }
 .card-purple { border-color: rgba(139,92,246,.4); }
@@ -595,7 +597,7 @@ textarea.input { resize: vertical; min-height: 60px; line-height: 1.5; }
   .loc-news-grid   { grid-template-columns: 1fr !important; }
   .npc-grid        { grid-template-columns: 1fr 1fr !important; }
   .players-grid    { grid-template-columns: 1fr 1fr !important; }
-  .ficha-grid      { grid-template-columns: 1fr !important; }
+  .ficha-grid      { columns: 1 !important; }
   .quirk-layout    { grid-template-columns: 1fr !important; }
   .inv-layout      { grid-template-columns: 1fr !important; }
   .q-layout        { grid-template-columns: 1fr !important; }
