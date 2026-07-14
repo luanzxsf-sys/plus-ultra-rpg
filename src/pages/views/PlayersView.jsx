@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getAllProfiles, supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import Avatar from '../../components/Avatar'
-import { gradeLabel, gradeColor, calcLevel, ATTR_META, ATTR_KEYS, QUIRK_TYPE_BONUSES, getSpecialty, calcAttrsWithSpecialty } from '../../lib/gameSystem'
+import { gradeLabel, gradeColor, calcLevel, ATTR_META, ATTR_KEYS, QUIRK_TYPE_BONUSES, getSpecialty, calcAttrsWithSpecialty, getOutfit, applyOutfitBonus } from '../../lib/gameSystem'
 import { computeProgress, ACHIEVEMENTS } from '../../lib/achievements'
 
 // ── PROFILE DETAIL MODAL ──────────────────────────────────────
@@ -11,7 +11,8 @@ function PlayerDetailModal({ p, onClose, isMe }) {
   const level = char?.level ?? calcLevel(char?.xp_total ?? char?.xp ?? 0)
   const xpPct = (char?.xp_max > 0) ? Math.min(100, Math.round((char.xp / char.xp_max) * 100)) : 0
   const specObj = getSpecialty(char?.specialty)
-  const effectiveAttrs = char?.attrs ? calcAttrsWithSpecialty(char.attrs, char?.specialty) : {}
+  const effectiveAttrs = char?.attrs ? applyOutfitBonus(calcAttrsWithSpecialty(char.attrs, char?.specialty), char?.equipped_outfit) : {}
+  const equippedOutfit = getOutfit(char?.equipped_outfit)
   const [showAllAch, setShowAllAch] = useState(false)
 
   return (
@@ -21,7 +22,7 @@ function PlayerDetailModal({ p, onClose, isMe }) {
           <div className="modal-title">👤 @{p.username}</div>
           <div style={{ display:'flex', gap:6, alignItems:'center' }}>
             <button className="btn btn-g btn-sm" onClick={()=>{
-              const summary = `🪪 LICENÇA DE HERÓI\n${char?.name||p.username}${char?.alias?` "${char.alias}"`:''}\nNível ${level}${char?.specialty?` · ${getSpecialty(char.specialty)?.label}`:''}${char?.quirk_data?.name?`\nQuirk: ${char.quirk_data.name}`:''}`
+              const summary = `🪪 LICENÇA DE HERÓI\n${char?.name||p.username}${char?.alias?` "${char.alias}"`:''}\nNível ${level}${char?.specialty?` · ${getSpecialty(char.specialty)?.label}`:''}${char?.quirk_data?.name?`\nQuirk: ${char.quirk_data.name}`:''}${equippedOutfit?`\nTraje: ${equippedOutfit.name}`:''}`
               navigator.clipboard?.writeText(summary)
             }} title="Copiar cartão">📋 Copiar</button>
             <button className="modal-close" onClick={onClose}>✕</button>
@@ -43,6 +44,7 @@ function PlayerDetailModal({ p, onClose, isMe }) {
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontFamily:'Bangers,cursive', fontSize:22, letterSpacing:1, color:'var(--text-h)' }}>{char?.name || p.username}</div>
               {char?.alias && <div style={{ fontSize:10, color:'var(--gold)', letterSpacing:2 }}>"{char.alias}"</div>}
+              {equippedOutfit && <div style={{ fontSize:9, color:equippedOutfit.color, marginTop:2 }}>{equippedOutfit.icon} {equippedOutfit.name}</div>}
               <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>
                 @{p.username} {isMe && <span style={{ color:'var(--purple-l)' }}>· (você)</span>}
               </div>

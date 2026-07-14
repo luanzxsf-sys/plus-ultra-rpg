@@ -8,7 +8,8 @@ import AttrBuilder from '../../components/AttrBuilder'
 import {
   ATTR_META, ATTR_KEYS, calcDerived, gradeLabel, gradeColor,
   SPECIALTIES, getSpecialty, calcAttrsWithSpecialty,
-  QUIRK_TYPE_BONUSES, quirkRankName, calcLevel, POINTS_PER_LEVEL
+  QUIRK_TYPE_BONUSES, quirkRankName, calcLevel, POINTS_PER_LEVEL,
+  OUTFITS, getOutfit, isOutfitUnlocked, applyOutfitBonus
 } from '../../lib/gameSystem'
 import { computeProgress, ACHIEVEMENTS } from '../../lib/achievements'
 
@@ -340,6 +341,52 @@ function quirkTypeBg(type, color){
   }
 }
 
+function OutfitsCard({ char, level, onEquip }) {
+  const equippedKey = char?.equipped_outfit
+  return (
+    <div className="card">
+      <div className="card-title">👔 Trajes</div>
+      <div style={{display:'flex',flexDirection:'column',gap:6}}>
+        <div onClick={()=>onEquip(null)} style={{
+          display:'flex',alignItems:'center',gap:8,padding:'7px 9px',borderRadius:7,cursor:'pointer',
+          background: !equippedKey ? 'rgba(139,146,166,.12)' : 'transparent',
+          border:`1px solid ${!equippedKey?'var(--border)':'transparent'}`,
+        }}>
+          <span style={{fontSize:16}}>👕</span>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--text)'}}>Nenhum</div>
+            <div style={{fontSize:9,color:'var(--dim)'}}>Sem bônus de traje</div>
+          </div>
+          {!equippedKey && <span style={{fontSize:9,color:'var(--green-l)',fontWeight:700}}>✓ Equipado</span>}
+        </div>
+        {OUTFITS.map(o=>{
+          const unlocked = isOutfitUnlocked(o, level)
+          const equipped = equippedKey===o.key
+          return (
+            <div key={o.key} onClick={()=>unlocked && onEquip(o.key)} title={!unlocked?`Desbloqueia no nível ${o.unlockLevel}`:o.desc}
+              style={{
+                display:'flex',alignItems:'center',gap:8,padding:'7px 9px',borderRadius:7,
+                cursor:unlocked?'pointer':'default',
+                background: equipped ? `${o.color}18` : 'transparent',
+                border:`1px solid ${equipped?o.color+'55':'var(--border)'}`,
+                opacity: unlocked?1:.45,
+              }}>
+              <span style={{fontSize:16,filter:unlocked?'none':'grayscale(1)'}}>{o.icon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:11,fontWeight:700,color:unlocked?'var(--text)':'var(--muted)'}}>{o.name}</div>
+                <div style={{fontSize:9,color:'var(--dim)'}}>
+                  {unlocked ? `+${o.bonus} ${ATTR_META[o.attr]?.label}` : `🔒 Nível ${o.unlockLevel}`}
+                </div>
+              </div>
+              {equipped && <span style={{fontSize:9,color:o.color,fontWeight:700}}>✓ Equipado</span>}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function AchievementsCard({ char }) {
   const level = char?.level ?? calcLevel(char?.xp_total ?? char?.xp ?? 0)
   const { unlocked, total, pct } = computeProgress(char, level)
@@ -396,6 +443,13 @@ export default function FichaView({ onRefreshChar }) {
 
   async function handleSaved(){ await refreshCharacter(); if(onRefreshChar) onRefreshChar() }
 
+  async function handleEquipOutfit(key){
+    const {error} = await upsertCharacter(user.id, { equipped_outfit: key })
+    if(error){ notify('❌ '+error.message,'error'); return }
+    notify(key ? '👔 Traje equipado!' : '👔 Traje removido', 'success')
+    await refreshCharacter()
+  }
+
   async function handleDelete(){
     // Full reset — name, attrs AND level/xp all go back to defaults
     const{error}=await resetCharacterFull(user.id,{
@@ -415,7 +469,12 @@ export default function FichaView({ onRefreshChar }) {
   const quirkType  = char?.quirk_data?.type||''
   const quirkBonus = QUIRK_TYPE_BONUSES[quirkType]
   const specObj    = getSpecialty(char?.specialty)
-  const effectiveAttrs = specObj ? calcAttrsWithSpecialty(char?.attrs||{}, char?.specialty) : (char?.attrs||{})
+  const level      = char?.level ?? calcLevel(char?.xp_total ?? char?.xp ?? 0)
+  const equippedOutfit = getOutfit(char?.equipped_outfit)
+  const effectiveAttrs = applyOutfitBonus(
+    specObj ? calcAttrsWithSpecialty(char?.attrs||{}, char?.specialty) : (char?.attrs||{}),
+    char?.equipped_outfit
+  )
   const derived    = calcDerived(effectiveAttrs, quirkType, charTraits)
   const skills     = (char?.quirk_data?.skills||[]).filter(s=>!s.locked).slice(0,4)
 
@@ -441,6 +500,7 @@ export default function FichaView({ onRefreshChar }) {
       <div className="ficha-grid" style={{columns:'3 320px',columnGap:16,maxWidth:1300,margin:'0 auto'}}>
         <AchievementsCard char={char}/>
         <HeroDiaryCard userId={user.id}/>
+        <OutfitsCard char={char} level={level} onEquip={handleEquipOutfit}/>
         <div className="card" style={{ backgroundImage: quirkTypeBg(char.quirk_data?.type, QUIRK_TYPE_BONUSES[char.quirk_data?.type]?.color), backgroundBlendMode:'overlay' }}>
             <div className="card-title">👤 Identidade</div>
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
@@ -448,6 +508,7 @@ export default function FichaView({ onRefreshChar }) {
               <div>
                 <div style={{fontFamily:'Bangers,cursive',fontSize:20,letterSpacing:1,color:'var(--text-h)'}}>{char.name}</div>
                 {char.alias&&<div style={{fontSize:10,color:'var(--gold)',letterSpacing:2}}>"{char.alias}"</div>}
+                {equippedOutfit&&<div style={{fontSize:9,color:equippedOutfit.color,marginTop:2}}>{equippedOutfit.icon} {equippedOutfit.name}</div>}
               </div>
             </div>
             {specObj&&(

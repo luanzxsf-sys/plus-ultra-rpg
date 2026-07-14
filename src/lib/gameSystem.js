@@ -66,7 +66,7 @@ export const ATTR_KEYS = Object.keys(ATTR_META)
 
 // ── DERIVED STATS ─────────────────────────────
 // Retorna atributos efetivos com TODOS os bônus aplicados e de onde vieram
-export function calcEffectiveAttrs(attrs, quirk_type, traits = [], specialty = '') {
+export function calcEffectiveAttrs(attrs, quirk_type, traits = [], specialty = '', outfitKey = null) {
   const base = { ...attrs }
   const bonuses = []   // [{source, attr, value}]
 
@@ -95,11 +95,18 @@ export function calcEffectiveAttrs(attrs, quirk_type, traits = [], specialty = '
     }
   })
 
+  // Bônus de traje equipado
+  const outfit = OUTFITS.find(o => o.key === outfitKey)
+  if (outfit) {
+    base[outfit.attr] = (base[outfit.attr] || 0) + outfit.bonus
+    bonuses.push({ source: outfit.name, sourceType:'outfit', attr: outfit.attr, value: outfit.bonus, color: outfit.color })
+  }
+
   return { effective: base, bonuses }
 }
 
-export function calcDerived(attrs, quirk_type, traits = [], specialty = '') {
-  const { effective } = calcEffectiveAttrs(attrs, quirk_type, traits, specialty)
+export function calcDerived(attrs, quirk_type, traits = [], specialty = '', outfitKey = null) {
+  const { effective } = calcEffectiveAttrs(attrs, quirk_type, traits, specialty, outfitKey)
   return {
     hpMax:      100 + (effective.resistencia || 0) * 5,
     quirkMax:   100 + (effective.controle    || 0) * 5,
@@ -110,6 +117,23 @@ export function calcDerived(attrs, quirk_type, traits = [], specialty = '') {
     rangeBonus: (effective.controle || 0) * 0.5,
     effective,
   }
+}
+
+// ── TRAJES (sistema de trajes equipáveis) ─────
+// Um bônus temático equipável — só um por vez. Desbloqueia por nível.
+export const OUTFITS = [
+  { key:'combat',   name:'Traje de Combate',    icon:'🥋', color:'#E5484D', attr:'resistencia', bonus:3, unlockLevel:1,  desc:'Reforçado pra resistir a impactos diretos.' },
+  { key:'stealth',  name:'Traje Furtivo',       icon:'🥷', color:'#8A93A6', attr:'agilidade',   bonus:3, unlockLevel:5,  desc:'Leve e silencioso — ideal pra investigação e infiltração.' },
+  { key:'support',  name:'Traje de Suporte',    icon:'🧰', color:'#3B6FF0', attr:'controle',    bonus:3, unlockLevel:10, desc:'Equipado com gadgets que potencializam o controle da Quirk.' },
+  { key:'formal',   name:'Traje de Gala',       icon:'🎩', color:'#F2B705', attr:'carisma',     bonus:3, unlockLevel:15, desc:'Pra eventos públicos, entrevistas e negociações.' },
+  { key:'awakened', name:'Traje de Despertar',  icon:'💥', color:'#8B5CF6', attr:'forca',       bonus:5, unlockLevel:25, desc:'Feito sob medida após o despertar pleno da Quirk.' },
+]
+export function getOutfit(key) { return OUTFITS.find(o => o.key === key) }
+export function isOutfitUnlocked(outfit, level) { return (level||0) >= outfit.unlockLevel }
+export function applyOutfitBonus(attrs, outfitKey) {
+  const outfit = OUTFITS.find(o => o.key === outfitKey)
+  if (!outfit) return attrs
+  return { ...attrs, [outfit.attr]: (attrs[outfit.attr]||0) + outfit.bonus }
 }
 
 // ── QUIRK RANGE (automático) ──────────────────
