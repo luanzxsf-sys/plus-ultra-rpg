@@ -309,7 +309,7 @@ export default function AppShell() {
             </div>
           </div>
         </div>
-        {renderView()}
+        <PullToRefresh>{renderView()}</PullToRefresh>
       </div>
 
       <ToastContainer />
